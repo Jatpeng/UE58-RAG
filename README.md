@@ -19,7 +19,10 @@ Blueprint
 → MCP
 ```
 
-The project currently contains the T01 foundation and T02 shared data contracts. It intentionally does not yet implement crawling, parsing, chunking, embedding, indexing, retrieval, reranking, or MCP integration.
+The project currently implements the foundation, shared data contracts,
+documentation ingestion/parser/chunker, Unreal Engine source inventory, and the
+Unreal C++ semantic parser. Embedding, indexing, retrieval, reranking, and MCP
+integration remain future tasks.
 
 ## Environment
 
@@ -168,6 +171,33 @@ ThirdParty source, plugin content, SDKs, resources, and shaders outside plugin
 plugin, file type, UE version, byte size, and SHA-256 for every file. File-system
 errors are written to `data/parsed/engine/issues.jsonl`.
 
+## Unreal C++ semantic parser
+
+T07 parses inventoried `.h`, `.cpp`, and `.inl` files with Tree-sitter C++ and
+a length-preserving Unreal macro scanner. It emits one `UEDocument` per class,
+struct, enum, free function, method, constructor, or field instead of treating a
+whole source file as one document. `UCLASS`, `USTRUCT`, `UENUM`, `UINTERFACE`,
+`UFUNCTION`, `UPROPERTY`, and `UDELEGATE` annotations remain attached to their
+symbols; export macros and parser-only UE annotations are masked without moving
+source locations.
+
+```bash
+python scripts/parse_engine.py
+```
+
+The full output is written to `data/parsed/engine/documents.jsonl`, with
+operational failures in `data/parsed/engine/parse_issues.jsonl`. Tree-sitter
+recovery state is recorded separately at file and symbol level so partially
+recoverable Unreal syntax is visible to later pipeline stages. Filtered smoke
+runs must use another output path:
+
+```bash
+python scripts/parse_engine.py \
+  --path-contains CharacterMovementComponent \
+  --limit-files 20 \
+  --output work/character_movement.jsonl
+```
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -178,6 +208,7 @@ python scripts/ingest_docs.py --help
 python scripts/parse_docs.py --help
 python scripts/chunk_docs.py --help
 python scripts/ingest_engine.py --help
+python scripts/parse_engine.py --help
 python scripts/build_index.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
@@ -185,4 +216,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T07 — Unreal C++ Semantic Parser**.
+The next recommended task is **T08 — C++ Semantic Chunker**.

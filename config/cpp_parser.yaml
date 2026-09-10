@@ -1,0 +1,27 @@
+include_file_types:
+  - "header"
+  - "cpp"
+  - "inl"
+
+semantic_macros:
+  - "UCLASS"
+  - "USTRUCT"
+  - "UENUM"
+  - "UINTERFACE"
+  - "UFUNCTION"
+  - "UPROPERTY"
+  - "UDELEGATE"
+
+mask_only_macros:
+  - "GENERATED_BODY"
+  - "GENERATED_UCLASS_BODY"
+  - "GENERATED_USTRUCT_BODY"
+  - "GENERATED_IINTERFACE_BODY"
+  - "UMETA"
+  - "UPARAM"
+  - "UE_DEPRECATED"
+
+mask_only_macro_patterns:
+  - "UE_DEPRECATED[A-Z0-9_]*"
+
+api_macro_pattern: "\\b[A-Z][A-Z0-9_]*_API\\b"
