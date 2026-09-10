@@ -1,0 +1,13 @@
+engine:
+  version: "5.8"
+  root: ""
+
+paths:
+  engine_source: "Engine/Source"
+  engine_plugins: "Engine/Plugins"
+
+data:
+  raw: "data/raw"
+  parsed: "data/parsed"
+  chunks: "data/chunks"
+  benchmark: "data/benchmark"

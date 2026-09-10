@@ -1,0 +1,5 @@
+provider: qwen
+model: Qwen/Qwen3-Embedding-0.6B
+device: auto
+batch_size: 32
+normalize: true
