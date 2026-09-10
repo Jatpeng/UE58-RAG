@@ -105,12 +105,33 @@ python scripts/ingest_docs.py --topic cpp --max-pages 10 --max-depth 1
 Raw Epic documentation is intended for local indexing. Respect Epic's site
 rules, terms, and copyright; do not redistribute the downloaded corpus.
 
+## Documentation parser
+
+T04 converts the cached HTML into validated `UEDocument` JSONL while preserving
+page titles, heading paths, paragraphs, lists, links, callouts, tables, images,
+and fenced code blocks. Navigation, footers, sidebars, cookie UI, table-of-content
+menus, and code-copy controls are removed.
+
+```bash
+python scripts/parse_docs.py
+```
+
+The parser writes:
+
+- `data/parsed/docs/documents.jsonl` — clean Markdown plus structured metadata
+- `data/parsed/docs/issues.jsonl` — downloaded placeholders or malformed pages
+  that could not safely become documents
+
+Parsing is deterministic: rerunning it replaces the output with the same IDs and
+ordering for an unchanged crawl manifest.
+
 ## CLI
 
 Commands other than documentation ingestion still expose help-only T01 skeletons.
 
 ```bash
 python scripts/ingest_docs.py --help
+python scripts/parse_docs.py --help
 python scripts/ingest_engine.py --help
 python scripts/build_index.py --help
 python scripts/query.py --help
@@ -119,4 +140,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T04 — Documentation Parser**.
+The next recommended task is **T05 — Documentation Semantic Chunker**.
