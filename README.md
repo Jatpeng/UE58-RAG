@@ -19,7 +19,7 @@ Blueprint
 → MCP
 ```
 
-T01 contains only the project skeleton, configuration files, CLI skeletons, smoke tests, and documentation. It intentionally does not implement crawling, parsing, chunking, embedding, indexing, retrieval, reranking, or MCP integration.
+The project currently contains the T01 foundation and T02 shared data contracts. It intentionally does not yet implement crawling, parsing, chunking, embedding, indexing, retrieval, reranking, or MCP integration.
 
 ## Environment
 
@@ -62,6 +62,19 @@ Do not commit a local `.env` file or generated Unreal Engine data.
 pytest
 ```
 
+## Shared data contracts
+
+All future ingestion pipelines use the same Pydantic models:
+
+- `UEDocument` for parsed source units
+- `UEChunk` for semantic chunks
+- `RetrievalResult` for retrieval output
+- `SourceType` and `SourceScope` for consistent provenance
+
+Validated records can be persisted with `save_jsonl()` and loaded with
+`load_jsonl()`. Every record requires an explicit Unreal Engine version; callers
+must read that version from `config/ue58.yaml` rather than embedding it in code.
+
 ## CLI
 
 The T01 commands expose help text only; their RAG behavior belongs to later tasks.
@@ -76,4 +89,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T02 — Unified Document Schema**, which will define the shared data contracts before ingestion begins.
+The next recommended task is **T03 — UE5.8 Documentation Crawler**.
