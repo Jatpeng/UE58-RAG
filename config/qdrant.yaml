@@ -1,0 +1,5 @@
+collection: "ue58_global"
+path: "data/qdrant"
+url: null
+batch_size: 64
+distance: "cosine"

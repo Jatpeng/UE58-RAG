@@ -242,6 +242,27 @@ default output path are configured in `config/embedding.yaml`. The artifact
 writer uses a two-pass JSONL stream and memory mapping so the full corpus does
 not need to fit in RAM.
 
+## Qdrant vector store
+
+T10 adds the `QdrantVectorStore` integration. It creates the configured
+collection, indexes searchable metadata fields, batch-upserts vectors, and
+supports exact filters for engine version, source type, module, plugin, class,
+and symbol. Upserts use deterministic UUIDs derived from chunk IDs and compare
+content hashes, so unchanged repeats are skipped while changed chunks are
+updated. A dependency-free in-memory mode is available for tests and smoke
+runs.
+
+```bash
+python scripts/build_index.py \
+  --input data/chunks/engine/chunks.jsonl \
+  --vectors data/embeddings/engine/embeddings.npy \
+  --ids data/embeddings/engine/embeddings.npy.ids.jsonl
+```
+
+Connection and collection settings live in `config/qdrant.yaml`. The command
+prints total, added, updated, skipped, and failed counts. Use `--recreate` only
+when intentionally rebuilding the collection.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -262,4 +283,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T10 — Qdrant Vector Store**.
+The next recommended task is **T11 — Keyword / Symbol Search**.
