@@ -222,6 +222,26 @@ python scripts/chunk_engine.py \
   --output work/t08_character_movement.jsonl
 ```
 
+## Embedding provider
+
+T09 adds a replaceable `EmbeddingProvider` interface and a Qwen3 implementation
+backed by Sentence Transformers. The provider supports document/query encoding,
+configurable batches, automatic CPU/GPU selection, L2 normalization, and a
+persistent SQLite text/vector cache. Models are loaded lazily, so tests and CLI
+help do not download model weights.
+
+```bash
+python scripts/embed.py \
+  --input data/chunks/engine/chunks.jsonl \
+  --output data/embeddings/engine/embeddings.npy
+```
+
+The command writes a NumPy float32 matrix plus `.ids.jsonl` and
+`.manifest.json` sidecars. The embedding model, device, batch size, cache, and
+default output path are configured in `config/embedding.yaml`. The artifact
+writer uses a two-pass JSONL stream and memory mapping so the full corpus does
+not need to fit in RAM.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -234,6 +254,7 @@ python scripts/chunk_docs.py --help
 python scripts/ingest_engine.py --help
 python scripts/parse_engine.py --help
 python scripts/chunk_engine.py --help
+python scripts/embed.py --help
 python scripts/build_index.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
@@ -241,4 +262,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T09 — Embedding Provider abstraction**.
+The next recommended task is **T10 — Qdrant Vector Store**.

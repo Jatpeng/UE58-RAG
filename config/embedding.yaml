@@ -3,3 +3,5 @@ model: Qwen/Qwen3-Embedding-0.6B
 device: auto
 batch_size: 32
 normalize: true
+cache_path: "data/embeddings/cache.sqlite3"
+output_path: "data/embeddings/engine/embeddings.npy"
