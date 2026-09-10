@@ -198,6 +198,30 @@ python scripts/parse_engine.py \
   --output work/character_movement.jsonl
 ```
 
+## C++ semantic chunker
+
+T08 converts C++ symbol documents into retrieval-ready `UEChunk` records. Each
+chunk starts with a semantic header containing UE version, module, class, symbol,
+symbol type, and file. Functions normally remain whole; oversized functions are
+split on source lines with overlap and the complete context header repeated in
+every part. Classes are emitted as standalone type summaries, enums and structs
+remain independent chunks, and fields in the same class/file are merged into a
+`property_group` chunk with the original field symbols and document IDs retained
+in metadata.
+
+```bash
+python scripts/chunk_engine.py
+```
+
+The output is written to `data/chunks/engine/chunks.jsonl`. For a smoke run on a
+filtered parser output, override both paths:
+
+```bash
+python scripts/chunk_engine.py \
+  --input work/t07_character_movement.jsonl \
+  --output work/t08_character_movement.jsonl
+```
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -209,6 +233,7 @@ python scripts/parse_docs.py --help
 python scripts/chunk_docs.py --help
 python scripts/ingest_engine.py --help
 python scripts/parse_engine.py --help
+python scripts/chunk_engine.py --help
 python scripts/build_index.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
@@ -216,4 +241,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T08 — C++ Semantic Chunker**.
+The next recommended task is **T09 — Embedding Provider abstraction**.

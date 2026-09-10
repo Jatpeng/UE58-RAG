@@ -7,6 +7,12 @@ from ue_rag.chunker.docs import (
     HeuristicTokenCounter,
     load_docs_chunker_config,
 )
+from ue_rag.chunker.cpp import (
+    CPPChunkSummary,
+    CPPChunkerConfig,
+    CPPSemanticChunker,
+    load_cpp_chunker_config,
+)
 
 
 __all__ = [
@@ -15,4 +21,8 @@ __all__ = [
     "DocumentationChunkerConfig",
     "HeuristicTokenCounter",
     "load_docs_chunker_config",
+    "CPPChunkSummary",
+    "CPPChunkerConfig",
+    "CPPSemanticChunker",
+    "load_cpp_chunker_config",
 ]
