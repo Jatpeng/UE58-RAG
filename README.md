@@ -146,9 +146,32 @@ Token counts currently use the deterministic lightweight counter configured in
 `config/docs_chunker.yaml`. The counter is replaceable so a later model-specific
 tokenizer can be introduced without coupling chunking to an embedding provider.
 
+## Unreal Engine source scanner
+
+T06 inventories the configured Unreal Engine installation without parsing C++.
+Set `engine.root` in `config/ue58.yaml` to the installation directory that
+contains `Engine/`. Before scanning, the CLI validates `Engine/Build/Build.version`
+against the configured major/minor version.
+
+```bash
+python scripts/ingest_engine.py --dry-run
+python scripts/ingest_engine.py
+```
+
+The scanner covers `Runtime`, `Editor`, `Developer`, and `Programs` beneath
+`Engine/Source`, plus source trees beneath `Engine/Plugins`. It includes `.h`,
+`.cpp`, `.inl`, and `.Build.cs`, while excluding generated/cache directories,
+ThirdParty source, plugin content, SDKs, resources, and shaders outside plugin
+`Source` directories.
+
+`data/parsed/engine/files.jsonl` records the engine-relative path, module,
+plugin, file type, UE version, byte size, and SHA-256 for every file. File-system
+errors are written to `data/parsed/engine/issues.jsonl`.
+
 ## CLI
 
-Commands other than documentation ingestion still expose help-only T01 skeletons.
+Implemented commands expose their full options; later pipeline commands remain
+help-only skeletons until their corresponding task is complete.
 
 ```bash
 python scripts/ingest_docs.py --help
@@ -162,4 +185,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T06 — Unreal Engine Source Scanner**.
+The next recommended task is **T07 — Unreal C++ Semantic Parser**.

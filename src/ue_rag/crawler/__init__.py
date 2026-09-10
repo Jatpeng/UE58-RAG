@@ -9,6 +9,14 @@ from ue_rag.crawler.docs import (
     TopicConfig,
     load_docs_crawler_config,
 )
+from ue_rag.crawler.engine import (
+    EngineFileRecord,
+    EngineFileType,
+    EngineScannerConfig,
+    EngineScanSummary,
+    EngineSourceScanner,
+    load_engine_scanner_config,
+)
 
 
 __all__ = [
@@ -17,6 +25,12 @@ __all__ = [
     "CrawlSummary",
     "DocumentationCrawler",
     "DocumentationCrawlerConfig",
+    "EngineFileRecord",
+    "EngineFileType",
+    "EngineScannerConfig",
+    "EngineScanSummary",
+    "EngineSourceScanner",
     "TopicConfig",
     "load_docs_crawler_config",
+    "load_engine_scanner_config",
 ]

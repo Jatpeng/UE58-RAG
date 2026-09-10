@@ -1,6 +1,6 @@
 engine:
   version: "5.8"
-  root: ""
+  root: "E:/Epic Game/UE_5.8"
 
 paths:
   engine_source: "Engine/Source"

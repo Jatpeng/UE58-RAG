@@ -1,0 +1,24 @@
+include_suffixes:
+  - ".h"
+  - ".cpp"
+  - ".inl"
+  - ".build.cs"
+
+source_categories:
+  - "Runtime"
+  - "Editor"
+  - "Developer"
+  - "Programs"
+
+ignored_directories:
+  - "Intermediate"
+  - "Binaries"
+  - "DerivedDataCache"
+  - "Saved"
+  - "Content"
+  - ".git"
+  - ".svn"
+  - ".vs"
+
+hash_chunk_size: 1048576
+hash_workers: 4
