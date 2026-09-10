@@ -75,9 +75,39 @@ Validated records can be persisted with `save_jsonl()` and loaded with
 `load_jsonl()`. Every record requires an explicit Unreal Engine version; callers
 must read that version from `config/ue58.yaml` rather than embedding it in code.
 
+## Documentation crawler
+
+T03 downloads raw Epic documentation HTML into `data/raw/docs/`. The crawler:
+
+- supports Gameplay, Programming, C++, Blueprint, Networking, Rendering,
+  Animation, AI, and UI topic allowlists;
+- checks `robots.txt`, caches successful rules for 24 hours, and stops safely
+  when no valid rules can be loaded;
+- applies a configurable delay, retry policy, depth limit, and page limit;
+- normalizes locale and the version read from `config/ue58.yaml` for URL
+  deduplication;
+- stores an append-only `manifest.jsonl` with source URL, fetch time, UE version,
+  checksum, and local cache path;
+- reuses successful cached pages and can continue link discovery after restart.
+
+Inspect the seed plan without network or file writes:
+
+```bash
+python scripts/ingest_docs.py --topic cpp --dry-run
+```
+
+Run a deliberately small crawl before increasing the configured limits:
+
+```bash
+python scripts/ingest_docs.py --topic cpp --max-pages 10 --max-depth 1
+```
+
+Raw Epic documentation is intended for local indexing. Respect Epic's site
+rules, terms, and copyright; do not redistribute the downloaded corpus.
+
 ## CLI
 
-The T01 commands expose help text only; their RAG behavior belongs to later tasks.
+Commands other than documentation ingestion still expose help-only T01 skeletons.
 
 ```bash
 python scripts/ingest_docs.py --help
@@ -89,4 +119,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T03 — UE5.8 Documentation Crawler**.
+The next recommended task is **T04 — Documentation Parser**.

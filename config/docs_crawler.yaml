@@ -1,0 +1,148 @@
+base_url: "https://dev.epicgames.com"
+locale: "en-us"
+robots_url: "https://dev.epicgames.com/robots.txt"
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) UE58RAG/0.1 Chrome/140.0.0.0 Safari/537.36"
+
+request:
+  timeout_seconds: 30
+  delay_seconds: 1.0
+  max_retries: 3
+  retry_backoff_seconds: 1.0
+  robots_cache_ttl_seconds: 86400
+
+limits:
+  max_pages: 250
+  max_depth: 2
+
+allowed_hosts:
+  - "dev.epicgames.com"
+
+allowed_path_prefixes:
+  - "/documentation/en-us/unreal-engine/"
+
+topics:
+  gameplay:
+    seeds:
+      - "/documentation/en-us/unreal-engine/gameplay-systems-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/gameplay-tutorials-in-unreal-engine"
+    include_patterns:
+      - "gameplay"
+      - "game-framework"
+      - "game-mode"
+      - "game-state"
+      - "player-state"
+      - "character"
+      - "pawn"
+      - "input"
+
+  programming:
+    seeds:
+      - "/documentation/en-us/unreal-engine/setting-up-your-development-environment-for-cplusplus-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/programming-tools-for-unreal-engine"
+      - "/documentation/en-us/unreal-engine/unreal-build-tool-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/build-configuration-for-unreal-engine"
+      - "/documentation/en-us/unreal-engine/unreal-engine-modules"
+      - "/documentation/en-us/unreal-engine/module-properties-in-unreal-engine"
+    include_patterns:
+      - "programming"
+      - "development"
+      - "coding"
+      - "build-tool"
+      - "unreal-build"
+
+  cpp:
+    seeds:
+      - "/documentation/en-us/unreal-engine/programming-with-cplusplus-in-unreal-engine"
+    include_patterns:
+      - "cplusplus"
+      - "cpp"
+      - "coding-standard"
+      - "reflection-system"
+      - "metadata-specifier"
+      - "delegate"
+      - "containers-in-unreal-engine"
+
+  blueprint:
+    seeds:
+      - "/documentation/en-us/unreal-engine/blueprints-visual-scripting-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/introduction-to-blueprints-visual-scripting-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/quick-start-guide-for-blueprints-visual-scripting-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/blueprint-best-practices-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/technical-guide-for-blueprints-visual-scripting-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/exposing-gameplay-elements-to-blueprints-visual-scripting-in-unreal-engine"
+    include_patterns:
+      - "blueprint"
+
+  networking:
+    seeds:
+      - "/documentation/en-us/unreal-engine/networking-and-multiplayer-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/networking-overview-for-unreal-engine"
+      - "/documentation/en-us/unreal-engine/actor-replication-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/remote-procedure-calls-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/replicated-object-execution-order-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/iris-replication-system-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/replication-graph-in-unreal-engine"
+    include_patterns:
+      - "network"
+      - "multiplayer"
+      - "replication"
+      - "iris"
+
+  rendering:
+    seeds:
+      - "/documentation/en-us/unreal-engine/designing-visuals-rendering-and-graphics-with-unreal-engine"
+    include_patterns:
+      - "render"
+      - "lumen"
+      - "nanite"
+      - "shader"
+      - "material"
+      - "lighting"
+      - "texture"
+      - "ray-tracing"
+      - "post-process"
+
+  animation:
+    seeds:
+      - "/documentation/en-us/unreal-engine/animating-characters-and-objects-in-unreal-engine"
+    include_patterns:
+      - "animat"
+      - "skeletal"
+      - "control-rig"
+      - "sequencer"
+      - "blend-space"
+
+  ai:
+    seeds:
+      - "/documentation/en-us/unreal-engine/artificial-intelligence-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/behavior-trees-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/state-tree-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/environment-query-system-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/ai-perception-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/navigation-system-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/smart-objects-in-unreal-engine"
+    include_patterns:
+      - "artificial-intelligence"
+      - "behavior-tree"
+      - "blackboard"
+      - "environment-query"
+      - "ai-perception"
+      - "navigation-system"
+      - "state-tree"
+      - "smart-object"
+      - "mass-entity"
+
+  ui:
+    seeds:
+      - "/documentation/en-us/unreal-engine/creating-user-interfaces-with-umg-and-slate-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/umg-ui-designer-quick-start-guide-in-unreal-engine"
+      - "/documentation/en-us/unreal-engine/widget-blueprints-in-umg-for-unreal-engine"
+      - "/documentation/en-us/unreal-engine/umg-editor-reference-for-unreal-engine"
+      - "/documentation/en-us/unreal-engine/slate-user-interface-programming-framework-for-unreal-engine"
+    include_patterns:
+      - "user-interface"
+      - "umg"
+      - "slate"
+      - "widget"
+      - "accessibility"
+      - "localization"
