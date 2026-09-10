@@ -1,0 +1,4 @@
+index_path: "data/index/lexical.sqlite3"
+batch_size: 512
+symbol_top_k: 10
+lexical_top_k: 10

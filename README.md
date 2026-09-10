@@ -263,6 +263,30 @@ Connection and collection settings live in `config/qdrant.yaml`. The command
 prints total, added, updated, skipped, and failed counts. Use `--recreate` only
 when intentionally rebuilding the collection.
 
+## Keyword and symbol search
+
+T11 adds a SQLite FTS5 lexical index for C++ chunks. It indexes symbols, class
+and function names, UE macro names, file paths, and source text. Exact symbol,
+class, function, and merged-property aliases are resolved first; lexical FTS
+results then fill the remaining slots. The same `RetrievalResult` contract is
+returned for symbol, lexical, and hybrid searches, with filters for engine
+version, source type, module, plugin, class, and symbol.
+
+```bash
+python scripts/build_lexical_index.py \
+  --input data/chunks/engine/chunks.jsonl \
+  --index data/index/lexical.sqlite3
+
+python scripts/query.py \
+  "UCharacterMovementComponent::MaxWalkSpeed" \
+  --mode symbol \
+  --index data/index/lexical.sqlite3
+```
+
+The index builder streams JSONL in bounded transactions and reports added,
+updated, skipped, and failed records. Generated SQLite indexes are local
+artifacts and are excluded from Git.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -277,6 +301,7 @@ python scripts/parse_engine.py --help
 python scripts/chunk_engine.py --help
 python scripts/embed.py --help
 python scripts/build_index.py --help
+python scripts/build_lexical_index.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
 ```

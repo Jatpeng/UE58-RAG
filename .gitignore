@@ -12,8 +12,14 @@ htmlcov/
 data/raw/*
 data/parsed/*
 data/chunks/*
+data/embeddings/*
+data/index/*
+data/qdrant/*
 
 !data/raw/.gitkeep
 !data/parsed/.gitkeep
 !data/chunks/.gitkeep
+!data/embeddings/.gitkeep
+!data/index/.gitkeep
+!data/qdrant/.gitkeep
 !data/benchmark/.gitkeep
