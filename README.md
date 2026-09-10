@@ -125,6 +125,27 @@ The parser writes:
 Parsing is deterministic: rerunning it replaces the output with the same IDs and
 ordering for an unchanged crawl manifest.
 
+## Documentation semantic chunker
+
+T05 splits parsed documentation by its H1/H2/H3 hierarchy. A section remains
+whole until it exceeds the configured 1500-token maximum; oversized sections are
+then split around an 800-token target with 125-token overlap. Every secondary
+part repeats its complete heading path.
+
+```bash
+python scripts/chunk_docs.py
+```
+
+The output is written to `data/chunks/docs/chunks.jsonl`. Each `UEChunk` retains
+the page title, section path, source URL, UE version, source type, source file,
+and deterministic document/chunk IDs. Fenced code blocks are indivisible; a code
+block larger than the hard limit is preserved intact and explicitly marked as an
+oversized atomic block.
+
+Token counts currently use the deterministic lightweight counter configured in
+`config/docs_chunker.yaml`. The counter is replaceable so a later model-specific
+tokenizer can be introduced without coupling chunking to an embedding provider.
+
 ## CLI
 
 Commands other than documentation ingestion still expose help-only T01 skeletons.
@@ -132,6 +153,7 @@ Commands other than documentation ingestion still expose help-only T01 skeletons
 ```bash
 python scripts/ingest_docs.py --help
 python scripts/parse_docs.py --help
+python scripts/chunk_docs.py --help
 python scripts/ingest_engine.py --help
 python scripts/build_index.py --help
 python scripts/query.py --help
@@ -140,4 +162,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T05 — Documentation Semantic Chunker**.
+The next recommended task is **T06 — Unreal Engine Source Scanner**.

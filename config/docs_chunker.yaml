@@ -1,0 +1,5 @@
+token_counter: "heuristic"
+target_tokens: 800
+min_tokens: 500
+max_tokens: 1500
+overlap_tokens: 125
