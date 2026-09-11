@@ -360,6 +360,22 @@ python scripts/query.py \
 Use `--mode hybrid` for dense + lexical RRF, or `--mode rerank` for the final
 candidate reranking pipeline.
 
+## MCP server
+
+T16 exposes the retrieval pipeline through the official MCP Python SDK. The
+server registers four tools: `ue_search`, `ue_find_symbol`, `ue_search_docs`,
+and `ue_search_source`. It runs in lexical-only mode by default; pass
+`--enable-dense` to enable Qdrant/embedding hybrid search and
+`--enable-rerank` to add the reranker stage.
+
+```bash
+python scripts/mcp_server.py
+```
+
+The default transport is stdio for Cursor/Claude-style clients. Use
+`--transport sse` or `--transport streamable-http` when an HTTP transport is
+required. Install the optional server dependency with `pip install "mcp[cli]"`.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -379,8 +395,9 @@ python scripts/hybrid_query.py --help
 python scripts/rerank_query.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
+python scripts/mcp_server.py --help
 ```
 
 ## Current Scope
 
-The next recommended task is **T16 — MCP Server**.
+The next recommended task is **T17 — Project RAG**.
