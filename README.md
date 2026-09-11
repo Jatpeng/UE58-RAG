@@ -376,6 +376,23 @@ The default transport is stdio for Cursor/Claude-style clients. Use
 `--transport sse` or `--transport streamable-http` when an HTTP transport is
 required. Install the optional server dependency with `pip install "mcp[cli]"`.
 
+## Project RAG scanner
+
+T17 adds a project-scoped scanner for the second-stage RAG corpus. It reads the
+project root from `config/project_scanner.yaml` or `--project-root`, scans
+`Source/`, `Plugins/`, `Config/`, and `Docs/`, and records project/engine source
+provenance, module/plugin names, file type, size, and SHA-256. Generated folders
+such as `Binaries`, `Intermediate`, `Saved`, and `DerivedDataCache` are ignored.
+
+```bash
+python scripts/ingest_project.py --project-root D:/Work/MyGame --dry-run
+python scripts/ingest_project.py --project-root D:/Work/MyGame
+```
+
+The inventory is written to `data/parsed/project/files.jsonl`; filesystem issues
+are written separately to `issues.jsonl`. The output is ready for the next
+incremental project-indexing task and does not modify the project itself.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -400,4 +417,4 @@ python scripts/mcp_server.py --help
 
 ## Current Scope
 
-The next recommended task is **T17 — Project RAG**.
+The next recommended task is **T18 — Incremental Project Indexing**.

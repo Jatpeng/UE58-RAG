@@ -1,0 +1,27 @@
+root: null
+source_directories:
+  - "Source"
+  - "Plugins"
+  - "Config"
+  - "Docs"
+include_suffixes:
+  - ".h"
+  - ".hpp"
+  - ".cpp"
+  - ".inl"
+  - ".cs"
+  - ".ini"
+  - ".json"
+  - ".yaml"
+  - ".yml"
+  - ".md"
+  - ".txt"
+ignored_directories:
+  - ".git"
+  - "Binaries"
+  - "DerivedDataCache"
+  - "Intermediate"
+  - "Saved"
+  - "Build"
+hash_chunk_size: 1048576
+hash_workers: 8
