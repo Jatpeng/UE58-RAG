@@ -341,6 +341,25 @@ Results are written to `data/benchmark/benchmark_results.json` and
 `benchmark_results.md`. Benchmark evaluation does not invent scores when an
 index is unavailable; it fails with a clear input error instead.
 
+## Unified query CLI
+
+T15 makes `scripts/query.py` the single user-facing query entry point. It
+supports symbol, lexical, hybrid, and rerank modes, optional metadata filters,
+precomputed query vectors for offline use, and human-readable or JSON output.
+Lexical mode is the default so the command can run without model weights; the
+hybrid and rerank modes connect the configured Qdrant, embedding, and reranker
+stages when those services/artifacts are available.
+
+```bash
+python scripts/query.py \
+  "UCharacterMovementComponent::MaxWalkSpeed" \
+  --mode symbol \
+  --index data/index/lexical.sqlite3
+```
+
+Use `--mode hybrid` for dense + lexical RRF, or `--mode rerank` for the final
+candidate reranking pipeline.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -364,4 +383,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T15 — Unified Query CLI**.
+The next recommended task is **T16 — MCP Server**.

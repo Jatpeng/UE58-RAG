@@ -11,6 +11,7 @@ from ue_rag.retrieval.hybrid import (
     RetrievalConfig,
     load_retrieval_config,
 )
+from ue_rag.retrieval.query import UnifiedQueryService
 
 __all__ = [
     "HybridRetriever",
@@ -18,6 +19,7 @@ __all__ = [
     "LexicalIndex",
     "LexicalIngestSummary",
     "RetrievalConfig",
+    "UnifiedQueryService",
     "load_lexical_config",
     "load_retrieval_config",
 ]
