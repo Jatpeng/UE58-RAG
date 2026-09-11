@@ -1,0 +1,3 @@
+output_json: "data/benchmark/benchmark_results.json"
+output_markdown: "data/benchmark/benchmark_results.md"
+baseline: {}

@@ -324,6 +324,23 @@ python scripts/rerank_query.py \
 The Qwen model is loaded only when the command is run; tests inject a local
 fake CrossEncoder and do not download weights.
 
+## Retrieval benchmark
+
+T14 adds benchmark cases and ranking metrics: Hit@1/3/5/10, Recall@5/10, MRR,
+and nDCG. Cases can be split across category JSONL files; reports contain both
+overall macro averages and per-category scores. Optional baseline thresholds
+make the CLI return exit code 1 when a change regresses a configured metric.
+
+```bash
+python scripts/evaluate.py \
+  --input data/benchmark/symbol.jsonl \
+  --index data/index/lexical.sqlite3
+```
+
+Results are written to `data/benchmark/benchmark_results.json` and
+`benchmark_results.md`. Benchmark evaluation does not invent scores when an
+index is unavailable; it fails with a clear input error instead.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -347,4 +364,4 @@ python scripts/evaluate.py --help
 
 ## Current Scope
 
-The next recommended task is **T13 — Reranker abstraction**.
+The next recommended task is **T15 — Unified Query CLI**.
