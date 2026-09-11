@@ -306,6 +306,24 @@ RRF and Top-K parameters are configured in `config/retrieval.yaml`. T12 does
 not require an LLM API; it only combines already indexed dense and lexical
 results.
 
+## Reranker
+
+T13 adds a model-independent `Reranker` interface and a Qwen3-Reranker adapter.
+The `RAGQueryPipeline` composes any retriever with any reranker, defaults to
+retrieving the configured candidate set and returning `rerank_top_k` results,
+and preserves the dense/sparse ranks in result metadata. Batch size, device,
+model, and final top-k are configured in `config/reranker.yaml`.
+
+```bash
+python scripts/rerank_query.py \
+  "UE5.8 角色移动网络预测" \
+  --qdrant-config config/qdrant.yaml \
+  --lexical-config config/lexical.yaml
+```
+
+The Qwen model is loaded only when the command is run; tests inject a local
+fake CrossEncoder and do not download weights.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -322,6 +340,7 @@ python scripts/embed.py --help
 python scripts/build_index.py --help
 python scripts/build_lexical_index.py --help
 python scripts/hybrid_query.py --help
+python scripts/rerank_query.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
 ```

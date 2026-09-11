@@ -1,0 +1,5 @@
+model: "Qwen/Qwen3-Reranker-0.6B"
+device: "auto"
+batch_size: 8
+top_k: 8
+max_length: 4096
