@@ -287,6 +287,25 @@ The index builder streams JSONL in bounded transactions and reports added,
 updated, skipped, and failed records. Generated SQLite indexes are local
 artifacts and are excluded from Git.
 
+## Hybrid retrieval
+
+T12 combines the Qdrant dense results and SQLite lexical results with
+Reciprocal Rank Fusion (RRF). The configured dense and sparse Top-K lists are
+merged into a final `fusion_top_k`; each result retains both source ranks and
+the computed fusion score. An embedding provider can generate the query vector,
+or a precomputed vector can be supplied for deterministic/offline calls.
+
+```bash
+python scripts/hybrid_query.py \
+  "UE5.8 角色移动网络预测" \
+  --qdrant-config config/qdrant.yaml \
+  --lexical-config config/lexical.yaml
+```
+
+RRF and Top-K parameters are configured in `config/retrieval.yaml`. T12 does
+not require an LLM API; it only combines already indexed dense and lexical
+results.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -302,10 +321,11 @@ python scripts/chunk_engine.py --help
 python scripts/embed.py --help
 python scripts/build_index.py --help
 python scripts/build_lexical_index.py --help
+python scripts/hybrid_query.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
 ```
 
 ## Current Scope
 
-The next recommended task is **T11 — Keyword / Symbol Search**.
+The next recommended task is **T13 — Reranker abstraction**.
