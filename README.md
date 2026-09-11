@@ -393,6 +393,25 @@ The inventory is written to `data/parsed/project/files.jsonl`; filesystem issues
 are written separately to `issues.jsonl`. The output is ready for the next
 incremental project-indexing task and does not modify the project itself.
 
+## Incremental Project RAG
+
+T18 compares two project inventories by relative path and SHA-256. Added and
+modified files are the only records sent through caller-provided
+parse → chunk → embed → upsert stages; deleted paths are sent to a delete hook,
+and unchanged files are skipped. The deterministic change plan is written as
+JSONL for auditability and can be generated independently of the indexing
+backend.
+
+```bash
+python scripts/incremental_project.py \
+  --previous data/parsed/project/files.previous.jsonl \
+  --current data/parsed/project/files.jsonl \
+  --output data/parsed/project/changes.jsonl
+```
+
+The orchestration API is `IncrementalProjectIndexer`; it keeps project updates
+bounded to changed files and leaves parser/chunker/model choices injectable.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -417,4 +436,4 @@ python scripts/mcp_server.py --help
 
 ## Current Scope
 
-The next recommended task is **T18 — Incremental Project Indexing**.
+The next recommended task is **T19 — Blueprint Exporter**.

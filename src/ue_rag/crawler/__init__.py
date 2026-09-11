@@ -26,6 +26,16 @@ from ue_rag.crawler.project import (
     ProjectScannerConfig,
     load_project_scanner_config,
 )
+from ue_rag.crawler.incremental import (
+    ChangeKind,
+    IncrementalProjectIndexer,
+    IncrementalRunSummary,
+    ProjectChange,
+    ProjectDiff,
+    diff_inventories,
+    load_inventory,
+    write_diff,
+)
 
 
 __all__ = [
@@ -49,4 +59,12 @@ __all__ = [
     "ProjectSourceScanner",
     "ProjectScannerConfig",
     "load_project_scanner_config",
+    "ChangeKind",
+    "IncrementalProjectIndexer",
+    "IncrementalRunSummary",
+    "ProjectChange",
+    "ProjectDiff",
+    "diff_inventories",
+    "load_inventory",
+    "write_diff",
 ]
