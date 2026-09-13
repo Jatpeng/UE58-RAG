@@ -2,6 +2,22 @@
 
 本篇说明如何使用本机 NVIDIA GPU 运行 `Qwen3-Embedding-0.6B`。
 
+## GPU 工作流
+
+```mermaid
+flowchart TD
+    A[检查nvidia-smi] --> B[检查torch.cuda]
+    B --> C{CUDA可用?}
+    C -->|否| D[安装CUDA版PyTorch]
+    D --> B
+    C -->|是| E[加载Qwen模型]
+    E --> F[批量读取chunk]
+    F --> G[限制max_length]
+    G --> H[GPU生成1024维向量]
+    H --> I[写入npy + ID + manifest]
+    I --> J[导入Qdrant]
+```
+
 ## 1. 检查显卡和 PyTorch
 
 ```powershell

@@ -2,6 +2,22 @@
 
 本篇说明如何把 RAG 接入 MCP 客户端，并加入真实项目和 Blueprint 数据。
 
+## MCP 调用流程
+
+```mermaid
+sequenceDiagram
+    participant C as Cursor/Claude
+    participant M as MCP Server
+    participant R as UnifiedQueryService
+    participant I as Lexical/Qdrant
+    C->>M: ue_search(query, mode, limit)
+    M->>R: 校验参数并转发
+    R->>I: 执行检索
+    I-->>R: RetrievalResult列表
+    R-->>M: JSON安全结果
+    M-->>C: 返回上下文
+```
+
 ## 1. MCP stdio 模式
 
 Cursor 或 Claude 可以启动：
