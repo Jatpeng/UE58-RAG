@@ -277,6 +277,10 @@ python scripts/build_lexical_index.py \
   --input data/chunks/engine/chunks.jsonl \
   --index data/index/lexical.sqlite3
 
+# Recommended for a clean full-corpus build:
+python scripts/build_lexical_index.py \
+  --rebuild --batch-size 2048 --progress-every 100000
+
 python scripts/query.py \
   "UCharacterMovementComponent::MaxWalkSpeed" \
   --mode symbol \
@@ -284,8 +288,10 @@ python scripts/query.py \
 ```
 
 The index builder streams JSONL in bounded transactions and reports added,
-updated, skipped, and failed records. Generated SQLite indexes are local
-artifacts and are excluded from Git.
+updated, skipped, and failed records. `--rebuild` writes a fresh index with a
+bulk SQLite path and atomically replaces the target only after a successful
+build; `--progress-every` prints periodic chunk counts for long builds.
+Generated SQLite indexes are local artifacts and are excluded from Git.
 
 ## Hybrid retrieval
 
