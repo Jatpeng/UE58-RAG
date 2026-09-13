@@ -13,6 +13,11 @@ from ue_rag.chunker.cpp import (
     CPPSemanticChunker,
     load_cpp_chunker_config,
 )
+from ue_rag.chunker.blueprint import (
+    BlueprintChunker,
+    BlueprintChunkerConfig,
+    load_blueprint_chunker_config,
+)
 
 
 __all__ = [
@@ -25,4 +30,7 @@ __all__ = [
     "CPPChunkerConfig",
     "CPPSemanticChunker",
     "load_cpp_chunker_config",
+    "BlueprintChunker",
+    "BlueprintChunkerConfig",
+    "load_blueprint_chunker_config",
 ]

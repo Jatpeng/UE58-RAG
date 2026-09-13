@@ -430,6 +430,21 @@ The exporter methods mirror the future Unreal MCP operations:
 `export_blueprint_function`, `export_blueprint_variables`, and
 `export_blueprint_components`.
 
+## Blueprint RAG chunks
+
+T20 converts the exported Blueprint documents into `UEChunk` records. Summary,
+function, variable, and component views remain whole; oversized graph views are
+split at node lines while repeating asset, graph, package, parent-class, and
+symbol context in every part. The resulting chunks use `source_type=blueprint`
+and can flow through the existing embedding, lexical, Qdrant, hybrid, reranker,
+and MCP stages.
+
+```bash
+python scripts/chunk_blueprint.py \
+  --input data/parsed/project/blueprints.jsonl \
+  --output data/chunks/project/blueprints.jsonl
+```
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -450,8 +465,12 @@ python scripts/rerank_query.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
 python scripts/mcp_server.py --help
+python scripts/export_blueprint.py --help
+python scripts/chunk_blueprint.py --help
 ```
 
 ## Current Scope
 
-The next recommended task is **T20 — Blueprint RAG**.
+The T01–T20 implementation chain is complete. The next step is to evaluate the
+full corpus with a real project, embeddings, Qdrant collection, and benchmark
+cases before optimizing further.
