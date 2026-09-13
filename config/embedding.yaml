@@ -1,7 +1,7 @@
 provider: qwen
 model: Qwen/Qwen3-Embedding-0.6B
-device: auto
-batch_size: 32
+device: cuda
+batch_size: 16
 max_length: 2048
 normalize: true
 cache_path: "data/embeddings/cache.sqlite3"

@@ -245,6 +245,10 @@ python scripts/embed.py \
   --batch-size 4 --max-length 2048 --progress-every 10000
 ```
 
+On a CUDA-capable machine, set `device: cuda` in `config/embedding.yaml` (the
+default configuration uses CUDA) or override it in a dedicated config. Verify
+the runtime before a long run with `python -c "import torch; print(torch.cuda.is_available())"`.
+
 The command writes a NumPy float32 matrix plus `.ids.jsonl` and
 `.manifest.json` sidecars. The embedding model, device, batch size, cache, and
 default output path are configured in `config/embedding.yaml`. The artifact
