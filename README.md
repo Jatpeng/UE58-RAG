@@ -412,6 +412,24 @@ python scripts/incremental_project.py \
 The orchestration API is `IncrementalProjectIndexer`; it keeps project updates
 bounded to changed files and leaves parser/chunker/model choices injectable.
 
+## Blueprint exporter
+
+T19 normalizes connector-neutral Blueprint JSON into the shared `UEDocument`
+schema. Each asset produces separate summary, graph, function, variables, and
+components documents with deterministic IDs, project scope, asset/package
+provenance, graph node/link counts, and structured JSON content.
+
+```bash
+python scripts/export_blueprint.py \
+  --input data/raw/project/blueprints.jsonl \
+  --output data/parsed/project/blueprints.jsonl
+```
+
+The exporter methods mirror the future Unreal MCP operations:
+`export_blueprint_summary`, `export_blueprint_graph`,
+`export_blueprint_function`, `export_blueprint_variables`, and
+`export_blueprint_components`.
+
 ## CLI
 
 Implemented commands expose their full options; later pipeline commands remain
@@ -436,4 +454,4 @@ python scripts/mcp_server.py --help
 
 ## Current Scope
 
-The next recommended task is **T19 — Blueprint Exporter**.
+The next recommended task is **T20 — Blueprint RAG**.
