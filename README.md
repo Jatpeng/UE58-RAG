@@ -236,6 +236,15 @@ python scripts/embed.py \
   --output data/embeddings/engine/embeddings.npy
 ```
 
+For large C++ chunks, use a bounded batch and token limit and show progress:
+
+```bash
+python scripts/embed.py \
+  --input data/chunks/engine/chunks.jsonl \
+  --output data/embeddings/engine/embeddings.npy \
+  --batch-size 4 --max-length 2048 --progress-every 10000
+```
+
 The command writes a NumPy float32 matrix plus `.ids.jsonl` and
 `.manifest.json` sidecars. The embedding model, device, batch size, cache, and
 default output path are configured in `config/embedding.yaml`. The artifact

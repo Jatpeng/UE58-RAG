@@ -42,6 +42,7 @@ def make_config(tmp_path: Path, **overrides: object) -> EmbeddingConfig:
         "model": "fake-qwen",
         "device": "cpu",
         "batch_size": 2,
+        "max_length": 128,
         "normalize": True,
         "cache_path": tmp_path / "cache.sqlite3",
         "output_path": tmp_path / "embeddings.npy",

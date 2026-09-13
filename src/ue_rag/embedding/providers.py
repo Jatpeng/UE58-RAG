@@ -27,6 +27,7 @@ class EmbeddingConfig(BaseModel):
     model: str = Field(min_length=1)
     device: str = "auto"
     batch_size: int = Field(gt=0)
+    max_length: int = Field(default=2048, gt=0)
     normalize: bool = True
     cache_path: Path | None = None
     output_path: Path
@@ -153,6 +154,11 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
                     "install the project dependencies first"
                 ) from error
             self._model = SentenceTransformer(self.config.model, device=self.device)
+            # UE source chunks can contain very large class/type bodies.  Cap
+            # tokenization before batching so one oversized chunk cannot cause
+            # an unbounded CPU allocation during full-corpus embedding.
+            if hasattr(self._model, "max_seq_length"):
+                self._model.max_seq_length = self.config.max_length
         return self._model
 
     @property
@@ -255,9 +261,13 @@ def embed_jsonl(
     input_path: str | Path,
     output_path: str | Path,
     provider: EmbeddingProvider,
+    *,
+    progress_every: int = 0,
 ) -> EmbeddingRunSummary:
     """Embed JSONL records into a memory-mapped ``.npy`` plus ID/manifest sidecars."""
 
+    if progress_every < 0:
+        raise ValueError("progress_every must not be negative")
     input_file = Path(input_path)
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -292,6 +302,8 @@ def embed_jsonl(
                     for index, (record_id, _) in enumerate(batch, start=row_start):
                         ids_file.write(json.dumps({"row": index, "id": record_id}, ensure_ascii=False) + "\n")
                     row_start += len(batch)
+                    if progress_every and row_start and row_start % progress_every < batch_size:
+                        print(f"Embedded: {row_start}/{total}", flush=True)
             assert matrix is not None
             matrix.flush()
         if dimension is None:
