@@ -149,3 +149,16 @@ def test_index_jsonl_streams_batches_and_reloads(tmp_path: Path) -> None:
 
     assert summary.total == summary.added == 5
     assert results[0].chunk_id == "chunk-3"
+
+
+def test_bulk_index_jsonl_builds_a_fresh_searchable_index(tmp_path: Path) -> None:
+    input_path = tmp_path / "chunks.jsonl"
+    chunks = [make_chunk(f"bulk-{i}", f"AHero::Bulk{i}", f"bulk movement {i}") for i in range(4)]
+    input_path.write_text("\n".join(chunk.model_dump_json() for chunk in chunks) + "\n", encoding="utf-8")
+
+    with LexicalIndex(tmp_path / "bulk.sqlite3", bulk_build=True) as index:
+        summary = index.index_jsonl(input_path, batch_size=2, bulk_build=True)
+        results = index.search_symbol("AHero::Bulk2")
+
+    assert (summary.total, summary.added, summary.updated, summary.skipped, summary.failed) == (4, 4, 0, 0, 0)
+    assert results[0].chunk_id == "bulk-2"

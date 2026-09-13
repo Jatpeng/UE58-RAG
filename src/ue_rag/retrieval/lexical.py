@@ -86,12 +86,21 @@ class LexicalIndex:
 
     FILTER_FIELDS = ("engine_version", "source_type", "module", "plugin", "class", "class_name", "symbol")
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, bulk_build: bool = False) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.connection = sqlite3.connect(self.path)
-        self.connection.execute("PRAGMA journal_mode=WAL")
-        self.connection.execute("PRAGMA synchronous=NORMAL")
+        # WAL/NORMAL is the safe serving configuration.  A throw-away rebuild
+        # can opt into the faster settings because the database is replaced
+        # atomically only after the build succeeds.
+        if bulk_build:
+            self.connection.execute("PRAGMA journal_mode=OFF")
+            self.connection.execute("PRAGMA synchronous=OFF")
+            self.connection.execute("PRAGMA temp_store=MEMORY")
+            self.connection.execute("PRAGMA cache_size=-200000")
+        else:
+            self.connection.execute("PRAGMA journal_mode=WAL")
+            self.connection.execute("PRAGMA synchronous=NORMAL")
         self.connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS chunks (
@@ -153,11 +162,26 @@ class LexicalIndex:
             raise
         return summary
 
-    def index_jsonl(self, input_path: str | Path, *, batch_size: int = 512) -> LexicalIngestSummary:
+    def index_jsonl(
+        self,
+        input_path: str | Path,
+        *,
+        batch_size: int = 512,
+        bulk_build: bool = False,
+        progress_every: int = 0,
+    ) -> LexicalIngestSummary:
         """Stream and validate UEChunk JSONL in bounded batches."""
 
+        if batch_size <= 0:
+            raise ValueError("batch_size must be greater than zero")
+        if progress_every < 0:
+            raise ValueError("progress_every must not be negative")
         summary = LexicalIngestSummary(0, 0, 0, 0, 0)
         batch: list[UEChunk] = []
+        # A fresh rebuild does not need one SELECT and several DELETEs per
+        # row.  The bulk path only uses INSERTs and executemany, which is
+        # materially faster for million-row corpora.
+        use_bulk = bulk_build and not self.connection.execute("SELECT 1 FROM chunks LIMIT 1").fetchone()
         with Path(input_path).open(encoding="utf-8") as stream:
             for line_number, line in enumerate(stream, start=1):
                 if not line.strip():
@@ -168,11 +192,55 @@ class LexicalIndex:
                     raise ValueError(f"Invalid UEChunk at line {line_number}: {input_path}") from error
                 batch.append(chunk)
                 if len(batch) >= batch_size:
-                    summary += self.upsert(batch)
+                    summary += self._bulk_insert(batch) if use_bulk else self.upsert(batch)
                     batch = []
+                    if progress_every and summary.total and summary.total % progress_every < batch_size:
+                        print(f"Processed: {summary.total}", flush=True)
             if batch:
-                summary += self.upsert(batch)
+                summary += self._bulk_insert(batch) if use_bulk else self.upsert(batch)
         return summary
+
+    def _bulk_insert(self, chunks: Sequence[UEChunk]) -> LexicalIngestSummary:
+        """Insert a batch into a new index without per-row existence checks."""
+
+        payloads = []
+        fts_payloads = []
+        aliases: list[tuple[str, str]] = []
+        for chunk in chunks:
+            digest = hashlib.sha256(chunk.content.encode("utf-8")).hexdigest()
+            payloads.append(_chunk_fields(chunk, digest))
+            fts_payloads.append(
+                (
+                    chunk.id,
+                    chunk.symbol or "",
+                    chunk.class_name or "",
+                    chunk.function_name or "",
+                    _macro_text(chunk),
+                    chunk.file_path or "",
+                    chunk.content,
+                )
+            )
+            values = [chunk.symbol, chunk.class_name, chunk.function_name]
+            field_symbols = chunk.metadata.get("field_symbols", [])
+            if isinstance(field_symbols, list):
+                values.extend(value for value in field_symbols if isinstance(value, str))
+            aliases.extend((value.casefold(), chunk.id) for value in values if value)
+        self.connection.execute("BEGIN")
+        try:
+            self.connection.executemany("INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", payloads)
+            self.connection.executemany(
+                "INSERT INTO chunks_fts(chunk_id, symbol, class_name, function_name, ue_macros, file_path, content) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                fts_payloads,
+            )
+            self.connection.executemany(
+                "INSERT OR IGNORE INTO exact_symbols(symbol_folded, chunk_id) VALUES (?, ?)", aliases
+            )
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+        return LexicalIngestSummary(len(chunks), len(chunks), 0, 0, 0)
 
     def search_symbol(
         self,
