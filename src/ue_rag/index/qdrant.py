@@ -150,8 +150,15 @@ class QdrantVectorStore:
         self,
         chunks: Sequence[UEChunk],
         vectors: Sequence[Sequence[float]] | np.ndarray,
+        *,
+        fast: bool = False,
     ) -> IngestSummary:
-        """Idempotently insert or update chunks and their vectors."""
+        """Idempotently insert or update chunks and their vectors.
+
+        ``fast=True`` is intended for a freshly recreated collection: it
+        avoids a retrieve-before-write round trip and lets the backend queue
+        the batch asynchronously.
+        """
 
         values = np.asarray(vectors, dtype=np.float32)
         if not chunks:
@@ -166,7 +173,7 @@ class QdrantVectorStore:
             raise ValueError("vector dimension does not match the collection")
         records: list[tuple[UEChunk, np.ndarray, dict[str, Any], str, str]] = []
         summary = IngestSummary(len(chunks), 0, 0, 0, 0)
-        existing = self._existing(chunks)
+        existing = {} if fast else self._existing(chunks)
         for chunk, vector in zip(chunks, values, strict=True):
             payload = _payload(chunk)
             point_id = _point_id(chunk.id)
@@ -179,7 +186,7 @@ class QdrantVectorStore:
             records.append((chunk, vector, payload, point_id, kind))
         if records:
             try:
-                self._write_records(records)
+                self._write_records(records, wait=not fast)
             except Exception:
                 return summary + IngestSummary(0, 0, 0, 0, len(records))
             summary += IngestSummary(
@@ -287,7 +294,12 @@ class QdrantVectorStore:
         )
         return {str(point.id): point.payload or {} for point in points}
 
-    def _write_records(self, records: Sequence[tuple[UEChunk, np.ndarray, dict[str, Any], str, str]]) -> None:
+    def _write_records(
+        self,
+        records: Sequence[tuple[UEChunk, np.ndarray, dict[str, Any], str, str]],
+        *,
+        wait: bool = True,
+    ) -> None:
         if self.client is None:
             for _, vector, payload, point_id, _ in records:
                 self._memory[point_id] = (vector.copy(), payload)
@@ -297,7 +309,7 @@ class QdrantVectorStore:
             models.PointStruct(id=point_id, vector=vector.tolist(), payload=payload)
             for _, vector, payload, point_id, _ in records
         ]
-        self.client.upsert(collection_name=self.config.collection, points=points, wait=True)
+        self.client.upsert(collection_name=self.config.collection, points=points, wait=wait)
 
 
 def ingest_jsonl(
@@ -307,9 +319,13 @@ def ingest_jsonl(
     *,
     ids_path: str | Path | None = None,
     batch_size: int | None = None,
+    fast: bool = False,
+    progress_every: int = 0,
 ) -> IngestSummary:
     """Stream UEChunk JSONL and a NumPy embedding matrix into the store."""
 
+    if progress_every < 0:
+        raise ValueError("progress_every must not be negative")
     vectors = np.load(vectors_path, mmap_mode="r")
     if vectors.ndim != 2:
         raise ValueError("embedding artifact must be a 2D NumPy matrix")
@@ -335,10 +351,14 @@ def ingest_jsonl(
                 chunks.append(chunk)
                 rows.append(row)
                 if len(chunks) == size:
-                    summary += store.upsert(chunks, vectors[rows])
+                    summary += store.upsert(chunks, vectors[rows], fast=fast)
+                    if progress_every and summary.total % progress_every < size:
+                        print(f"Indexed: {summary.total}/{vectors.shape[0]}", flush=True)
                     chunks, rows = [], []
             if chunks:
-                summary += store.upsert(chunks, vectors[rows])
+                summary += store.upsert(chunks, vectors[rows], fast=fast)
+                if progress_every:
+                    print(f"Indexed: {summary.total}/{vectors.shape[0]}", flush=True)
     finally:
         if ids_stream:
             ids_stream.close()

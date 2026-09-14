@@ -18,6 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch-size", type=int, help="Override ingest batch size.")
     parser.add_argument("--recreate", action="store_true", help="Recreate the collection before ingest.")
     parser.add_argument("--in-memory", action="store_true", help="Use an in-memory store for smoke tests.")
+    parser.add_argument("--progress-every", type=int, default=0, help="Print progress after approximately this many chunks.")
     return parser
 
 
@@ -31,12 +32,22 @@ def main() -> int:
             if args.batch_size <= 0:
                 raise ValueError("batch-size must be greater than zero")
             config.batch_size = args.batch_size
+        if args.progress_every < 0:
+            raise ValueError("progress-every must not be negative")
         store = QdrantVectorStore(config) if args.in_memory else QdrantVectorStore.from_config(config)
         if args.recreate:
             import numpy as np
             size = int(np.load(args.vectors, mmap_mode="r").shape[1])
             store.create_collection(size, recreate=True)
-        summary = ingest_jsonl(store, args.input, args.vectors, ids_path=args.ids, batch_size=args.batch_size)
+        summary = ingest_jsonl(
+            store,
+            args.input,
+            args.vectors,
+            ids_path=args.ids,
+            batch_size=args.batch_size,
+            fast=args.recreate,
+            progress_every=args.progress_every,
+        )
     except (OSError, KeyError, ValueError, RuntimeError) as error:
         print(f"Error: {error}")
         return 2
