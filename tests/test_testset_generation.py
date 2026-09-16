@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ue_rag.eval import TestsetConfig as GenerationConfig
 from ue_rag.eval import load_cases, sample_sources, write_generated_testset
+from scripts.generate_testset import _is_local_base_url
 
 
 def _chunk(index: int, *, module: str) -> dict[str, object]:
@@ -80,3 +81,10 @@ def test_generated_rows_export_to_existing_benchmark_format(tmp_path: Path) -> N
     assert generated == benchmark == 1
     assert cases[0].expected_chunk_ids == ["chunk-1"]
     assert cases[0].expected_symbols == ["UCharacterMovementComponent::GetMaxSpeed"]
+
+
+def test_only_loopback_endpoints_may_use_placeholder_api_keys() -> None:
+    assert _is_local_base_url("http://127.0.0.1:11434/v1")
+    assert _is_local_base_url("http://localhost:8000/v1")
+    assert not _is_local_base_url("https://api.deepseek.com")
+    assert not _is_local_base_url(None)

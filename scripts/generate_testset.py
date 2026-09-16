@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from ue_rag.eval import (
     load_testset_config,
@@ -26,6 +27,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device")
     parser.add_argument("--prepare-only", action="store_true", help="Sample traceable sources without calling an LLM.")
     return parser
+
+
+def _is_local_base_url(value: str | None) -> bool:
+    if not value:
+        return False
+    hostname = urlparse(value).hostname
+    return hostname in {"localhost", "127.0.0.1", "::1"}
 
 
 def main() -> int:
@@ -62,12 +70,12 @@ def main() -> int:
             return 0
 
         api_key = os.getenv(config.llm.api_key_env)
-        if not api_key and config.llm.base_url:
+        if not api_key and _is_local_base_url(config.llm.base_url):
             api_key = "local"
         if not api_key:
             raise RuntimeError(
-                f"{config.llm.api_key_env} is not set; a generation LLM is required. "
-                "Set the key or configure an OpenAI-compatible local base_url."
+                f"{config.llm.api_key_env} is not set in this PowerShell session; "
+                "set the remote API key or use an OpenAI-compatible localhost base_url."
             )
 
         try:
@@ -90,7 +98,16 @@ def main() -> int:
         }
         if config.llm.base_url:
             chat_args["base_url"] = config.llm.base_url
-        generator_llm = LangchainLLMWrapper(ChatOpenAI(**chat_args))
+        chat_model = ChatOpenAI(**chat_args)
+        try:
+            chat_model.invoke("Reply with exactly: OK")
+        except Exception as error:
+            raise RuntimeError(
+                f"LLM preflight failed for {config.llm.model} at "
+                f"{config.llm.base_url or 'the default endpoint'}: {error}"
+            ) from error
+        print(f"LLM preflight: OK ({config.llm.model})")
+        generator_llm = LangchainLLMWrapper(chat_model)
         generator_embeddings = HuggingFaceEmbeddings(
             model=config.embedding.model,
             device=config.embedding.device,
@@ -109,12 +126,15 @@ def main() -> int:
             max_workers=config.llm.max_workers,
             seed=config.seed,
         )
-        dataset = generator.generate_with_langchain_docs(
-            documents,
-            testset_size=config.testset_size,
-            run_config=run_config,
-            raise_exceptions=True,
-        )
+        try:
+            dataset = generator.generate_with_langchain_docs(
+                documents,
+                testset_size=config.testset_size,
+                run_config=run_config,
+                raise_exceptions=True,
+            )
+        except Exception as error:
+            raise RuntimeError(f"RAGAS generation failed: {type(error).__name__}: {error}") from error
         generated, benchmark = write_generated_testset(
             dataset.to_list(),
             testset_output=config.testset_output,
