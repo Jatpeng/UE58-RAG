@@ -78,6 +78,22 @@ def test_metrics_hit_recall_mrr_and_ndcg() -> None:
     assert report.overall.ndcg > 0
 
 
+def test_ndcg_does_not_double_count_duplicate_relevant_results() -> None:
+    case = make_case()
+    duplicate = make_result("duplicate", "UCharacterMovementComponent::MaxWalkSpeed")
+    results = [
+        make_result("right", "UCharacterMovementComponent::MaxWalkSpeed"),
+        duplicate,
+        duplicate.model_copy(update={"chunk_id": "duplicate-2"}),
+    ]
+
+    report = BenchmarkEvaluator(lambda *_args, **_kwargs: results, make_config(Path("."))).evaluate([case])
+
+    assert report.overall.hit_at_1 == 1
+    assert report.overall.recall_at_10 == 1
+    assert report.overall.ndcg == 1
+
+
 def test_field_aliases_count_as_relevant() -> None:
     case = BenchmarkCase(id="a", query="speed", expected_symbols=["AHero::MaxWalkSpeed"])
     result = make_result("properties", "AHero::Properties").model_copy(

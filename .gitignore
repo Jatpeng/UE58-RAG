@@ -29,3 +29,7 @@ tools/qdrant/
 data/benchmark/ragas_sources.jsonl
 data/benchmark/ragas_testset.jsonl
 data/benchmark/ragas_cases.jsonl
+data/benchmark/benchmark_results.json
+data/benchmark/benchmark_results.md
+data/benchmark/hybrid_benchmark_results.json
+data/benchmark/hybrid_benchmark_results.md

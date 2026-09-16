@@ -220,7 +220,8 @@ def _score_case(case: BenchmarkCase, results: Sequence[RetrievalResult]) -> Metr
     for result in results[:10]:
         candidates = _result_candidates(result)
         matches = expected & candidates
-        relevant.append(bool(matches))
+        newly_matched = matches - matched_expected
+        relevant.append(bool(newly_matched))
         matched_expected.update(matches)
     first_rank = next((index + 1 for index, value in enumerate(relevant) if value), None)
     return MetricScores(
