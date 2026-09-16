@@ -24,6 +24,13 @@ dependencies = [
 dev = [
     "pytest>=8.0",
 ]
+eval = [
+    "ragas==0.4.3",
+    "langchain>=0.3.27,<0.4",
+    "langchain-community>=0.3.30,<0.4",
+    "langchain-core>=0.3.75,<1",
+    "langchain-openai>=0.3.30,<0.4",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

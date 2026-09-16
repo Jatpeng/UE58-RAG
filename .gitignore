@@ -26,3 +26,6 @@ tools/qdrant/
 !data/index/.gitkeep
 !data/qdrant/.gitkeep
 !data/benchmark/.gitkeep
+data/benchmark/ragas_sources.jsonl
+data/benchmark/ragas_testset.jsonl
+data/benchmark/ragas_cases.jsonl

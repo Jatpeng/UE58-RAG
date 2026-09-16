@@ -1,0 +1,23 @@
+input: "data/chunks/engine/chunks.jsonl"
+sources_output: "data/benchmark/ragas_sources.jsonl"
+testset_output: "data/benchmark/ragas_testset.jsonl"
+benchmark_output: "data/benchmark/ragas_cases.jsonl"
+documents: 48
+testset_size: 30
+seed: 58
+min_chars: 400
+max_chars: 12000
+max_per_stratum: 4
+llm:
+  model: "gpt-4o-mini"
+  context: "Generate technically precise Simplified Chinese questions and reference answers for Unreal Engine 5.8 C++ developers. Preserve C++ symbol names in English."
+  base_url: null
+  api_key_env: "OPENAI_API_KEY"
+  temperature: 0.2
+  timeout_seconds: 180
+  max_retries: 3
+  max_workers: 4
+embedding:
+  model: "Qwen/Qwen3-Embedding-0.6B"
+  device: "cuda"
+  batch_size: 8

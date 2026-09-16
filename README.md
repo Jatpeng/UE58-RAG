@@ -365,6 +365,31 @@ Results are written to `data/benchmark/benchmark_results.json` and
 `benchmark_results.md`. Benchmark evaluation does not invent scores when an
 index is unavailable; it fails with a clear input error instead.
 
+## Synthetic testset generation
+
+RAGAS 0.4 can generate traceable questions, reference answers, and reference
+contexts from a bounded sample of the UE corpus. The generator streams the
+full chunk JSONL and keeps only a module-balanced sample in memory. Existing
+`Qwen3-Embedding-0.6B` embeddings are used locally; an OpenAI-compatible chat
+model is required to generate questions and answers.
+
+```powershell
+pip install -e ".[eval]"
+$env:OPENAI_API_KEY = "your-key"
+python scripts/generate_testset.py
+
+python scripts/evaluate.py `
+  --input data/benchmark/ragas_cases.jsonl `
+  --index data/index/lexical.sqlite3
+```
+
+Use `python scripts/generate_testset.py --prepare-only` to validate source
+sampling without calling an LLM. A local OpenAI-compatible server can be used
+with `--base-url` and `--model`. Generation settings and output paths live in
+`config/testset.yaml`. Native RAGAS rows are written to
+`ragas_testset.jsonl`; trace markers are converted automatically into the
+existing retrieval benchmark schema in `ragas_cases.jsonl`.
+
 ## Unified query CLI
 
 T15 makes `scripts/query.py` the single user-facing query entry point. It
@@ -488,6 +513,7 @@ python scripts/hybrid_query.py --help
 python scripts/rerank_query.py --help
 python scripts/query.py --help
 python scripts/evaluate.py --help
+python scripts/generate_testset.py --help
 python scripts/mcp_server.py --help
 python scripts/export_blueprint.py --help
 python scripts/chunk_blueprint.py --help
