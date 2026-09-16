@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import uuid
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ class QdrantConfig(BaseModel):
     api_key_env: str | None = None
     batch_size: int = Field(gt=0)
     distance: str = "cosine"
+    timeout_seconds: float = Field(default=60.0, gt=0)
 
     @field_validator("distance")
     @classmethod
@@ -94,6 +96,7 @@ class QdrantVectorStore:
         kwargs: dict[str, Any] = {}
         if config.url:
             kwargs["url"] = config.url
+            kwargs["timeout"] = config.timeout_seconds
             if config.api_key_env:
                 key = os.getenv(config.api_key_env)
                 if key:
@@ -132,7 +135,7 @@ class QdrantVectorStore:
             }[self.config.distance]
             self.client.create_collection(
                 collection_name=self.config.collection,
-                vectors_config=models.VectorParams(size=vector_size, distance=distance),
+                vectors_config=models.VectorParams(size=vector_size, distance=distance, on_disk=True),
             )
         for field in self.FILTER_FIELDS:
             try:
@@ -156,8 +159,9 @@ class QdrantVectorStore:
         """Idempotently insert or update chunks and their vectors.
 
         ``fast=True`` is intended for a freshly recreated collection: it
-        avoids a retrieve-before-write round trip and lets the backend queue
-        the batch asynchronously.
+        avoids a retrieve-before-write round trip. Writes still wait for
+        acknowledgement so a completed ingest never leaves queued batches
+        behind in embedded Qdrant.
         """
 
         values = np.asarray(vectors, dtype=np.float32)
@@ -186,8 +190,13 @@ class QdrantVectorStore:
             records.append((chunk, vector, payload, point_id, kind))
         if records:
             try:
-                self._write_records(records, wait=not fast)
-            except Exception:
+                self._write_records(records, wait=True)
+            except Exception as error:
+                print(
+                    f"Qdrant upsert failed for {len(records)} points: {error}",
+                    file=sys.stderr,
+                    flush=True,
+                )
                 return summary + IngestSummary(0, 0, 0, 0, len(records))
             summary += IngestSummary(
                 0,
@@ -220,6 +229,13 @@ class QdrantVectorStore:
             raise ValueError("limit must be greater than zero")
         _validate_filters(filters)
         query = np.asarray(query_vector, dtype=np.float32).reshape(-1)
+        if self._dimension is None and self.client is not None:
+            try:
+                info = self.client.get_collection(collection_name=self.config.collection)
+                vectors_config = info.config.params.vectors
+                self._dimension = int(getattr(vectors_config, "size"))
+            except Exception as error:
+                raise RuntimeError(f"unable to read Qdrant collection dimension: {error}") from error
         if self._dimension is None or query.size != self._dimension:
             raise ValueError("query vector dimension does not match the collection")
         if self.client is None:

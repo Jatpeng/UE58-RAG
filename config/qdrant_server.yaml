@@ -1,0 +1,6 @@
+collection: "ue58_global"
+path: null
+url: "http://127.0.0.1:6333"
+batch_size: 128
+distance: "cosine"
+timeout_seconds: 60

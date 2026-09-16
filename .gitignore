@@ -15,6 +15,9 @@ data/chunks/*
 data/embeddings/*
 data/index/*
 data/qdrant/*
+data/qdrant_server/*
+data/qdrant_server_incomplete_*/*
+tools/qdrant/
 
 !data/raw/.gitkeep
 !data/parsed/.gitkeep
