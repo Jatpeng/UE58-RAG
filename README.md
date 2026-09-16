@@ -276,6 +276,11 @@ Connection and collection settings live in `config/qdrant.yaml`. The command
 prints total, added, updated, skipped, and failed counts. Use `--recreate` only
 when intentionally rebuilding the collection.
 
+For the full UE5.8 corpus, use the disk-backed Qdrant Server profile
+`config/qdrant_server.yaml` (the embedded `path` mode is intended for tests and
+small datasets). Start Qdrant on port 6333, then pass
+`--qdrant-config config/qdrant_server.yaml` to the build and query commands.
+
 ## Keyword and symbol search
 
 T11 adds a SQLite FTS5 lexical index for C++ chunks. It indexes symbols, class
@@ -317,7 +322,7 @@ or a precomputed vector can be supplied for deterministic/offline calls.
 ```bash
 python scripts/hybrid_query.py \
   "UE5.8 角色移动网络预测" \
-  --qdrant-config config/qdrant.yaml \
+  --qdrant-config config/qdrant_server.yaml \
   --lexical-config config/lexical.yaml
 ```
 
