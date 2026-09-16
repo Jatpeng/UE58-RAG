@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from ue_rag.eval import TestsetConfig as GenerationConfig
-from ue_rag.eval import load_cases, sample_sources, write_generated_testset
+from ue_rag.eval import generation_request_size, load_cases, sample_sources, write_generated_testset
 from scripts.generate_testset import _is_local_base_url
 
 
@@ -34,6 +34,7 @@ def _config(tmp_path: Path, input_path: Path) -> GenerationConfig:
             "benchmark_output": tmp_path / "cases.jsonl",
             "documents": 4,
             "testset_size": 2,
+            "oversample_factor": 1.5,
             "seed": 58,
             "min_chars": 20,
             "max_chars": 2000,
@@ -88,3 +89,11 @@ def test_only_loopback_endpoints_may_use_placeholder_api_keys() -> None:
     assert _is_local_base_url("http://localhost:8000/v1")
     assert not _is_local_base_url("https://api.deepseek.com")
     assert not _is_local_base_url(None)
+
+
+def test_generation_request_oversamples_target_size(tmp_path: Path) -> None:
+    input_path = tmp_path / "chunks.jsonl"
+    config = _config(tmp_path, input_path)
+
+    assert config.testset_size == 2
+    assert generation_request_size(config) == 3

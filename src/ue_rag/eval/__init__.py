@@ -12,6 +12,7 @@ from ue_rag.eval.benchmark import (
 from ue_rag.eval.testset import (
     PreparedSource,
     TestsetConfig,
+    generation_request_size,
     load_testset_config,
     sample_sources,
     write_generated_testset,
@@ -28,6 +29,7 @@ __all__ = [
     "load_benchmark_config",
     "PreparedSource",
     "TestsetConfig",
+    "generation_request_size",
     "load_testset_config",
     "sample_sources",
     "write_generated_testset",

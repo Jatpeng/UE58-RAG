@@ -2,8 +2,9 @@ input: "data/chunks/engine/chunks.jsonl"
 sources_output: "data/benchmark/ragas_sources.jsonl"
 testset_output: "data/benchmark/ragas_testset.jsonl"
 benchmark_output: "data/benchmark/ragas_cases.jsonl"
-documents: 48
-testset_size: 30
+documents: 180
+testset_size: 100
+oversample_factor: 1.25
 seed: 58
 min_chars: 400
 max_chars: 12000

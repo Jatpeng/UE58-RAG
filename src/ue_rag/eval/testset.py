@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import random
 import re
 from collections import defaultdict
@@ -54,6 +55,7 @@ class TestsetConfig(BaseModel):
     benchmark_output: Path
     documents: int = Field(default=48, gt=0)
     testset_size: int = Field(default=30, gt=0)
+    oversample_factor: float = Field(default=1.0, ge=1.0, le=3.0)
     seed: int = 58
     min_chars: int = Field(default=400, ge=1)
     max_chars: int = Field(default=12000, gt=0)
@@ -81,9 +83,15 @@ def load_testset_config(path: str | Path = "config/testset.yaml") -> TestsetConf
     config = TestsetConfig(**values)
     if config.max_chars < config.min_chars:
         raise ValueError("max_chars must be greater than or equal to min_chars")
-    if config.documents < config.testset_size:
-        raise ValueError("documents must be greater than or equal to testset_size")
+    if config.documents < generation_request_size(config):
+        raise ValueError("documents must cover the oversampled generation request")
     return config
+
+
+def generation_request_size(config: TestsetConfig) -> int:
+    """Return the number of candidates RAGAS should attempt before trimming."""
+
+    return math.ceil(config.testset_size * config.oversample_factor)
 
 
 def sample_sources(config: TestsetConfig) -> list[PreparedSource]:

@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from ue_rag.eval import (
+    generation_request_size,
     load_testset_config,
     sample_sources,
     write_generated_testset,
@@ -126,17 +127,19 @@ def main() -> int:
             max_workers=config.llm.max_workers,
             seed=config.seed,
         )
+        requested_size = generation_request_size(config)
+        print(f"RAGAS candidate request: {requested_size}")
         try:
             dataset = generator.generate_with_langchain_docs(
                 documents,
-                testset_size=config.testset_size,
+                testset_size=requested_size,
                 run_config=run_config,
                 raise_exceptions=True,
             )
         except Exception as error:
             raise RuntimeError(f"RAGAS generation failed: {type(error).__name__}: {error}") from error
         generated, benchmark = write_generated_testset(
-            dataset.to_list(),
+            dataset.to_list()[: config.testset_size],
             testset_output=config.testset_output,
             benchmark_output=config.benchmark_output,
         )
