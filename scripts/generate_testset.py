@@ -77,6 +77,7 @@ def main() -> int:
             from ragas.llms import LangchainLLMWrapper
             from ragas.run_config import RunConfig
             from ragas.testset import TestsetGenerator
+            import rapidfuzz  # noqa: F401 - required by RAGAS relationship builders
         except ImportError as error:
             raise RuntimeError('install test generation dependencies with: pip install -e ".[eval]"') from error
 

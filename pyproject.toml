@@ -30,6 +30,7 @@ eval = [
     "langchain-community>=0.3.30,<0.4",
     "langchain-core>=0.3.75,<1",
     "langchain-openai>=0.3.30,<0.4",
+    "rapidfuzz>=3,<4",
 ]
 
 [tool.setuptools.packages.find]
