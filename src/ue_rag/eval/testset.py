@@ -44,6 +44,13 @@ class EmbeddingTestsetConfig(BaseModel):
     batch_size: int = Field(default=8, gt=0)
 
 
+class PersonaTestsetConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1)
+    role_description: str = Field(min_length=1)
+
+
 class TestsetConfig(BaseModel):
     """Configuration for bounded RAGAS testset generation."""
 
@@ -51,6 +58,7 @@ class TestsetConfig(BaseModel):
 
     input: Path
     sources_output: Path
+    knowledge_graph_output: Path
     testset_output: Path
     benchmark_output: Path
     documents: int = Field(default=48, gt=0)
@@ -62,6 +70,7 @@ class TestsetConfig(BaseModel):
     max_per_stratum: int = Field(default=4, gt=0)
     llm: LLMTestsetConfig
     embedding: EmbeddingTestsetConfig
+    personas: list[PersonaTestsetConfig] = Field(min_length=1)
 
 
 @dataclass(frozen=True)
@@ -77,7 +86,7 @@ def load_testset_config(path: str | Path = "config/testset.yaml") -> TestsetConf
     with config_path.open(encoding="utf-8") as stream:
         values = dict(yaml.safe_load(stream) or {})
     project_root = config_path.parent.parent
-    for key in ("input", "sources_output", "testset_output", "benchmark_output"):
+    for key in ("input", "sources_output", "knowledge_graph_output", "testset_output", "benchmark_output"):
         value = Path(values[key])
         values[key] = value if value.is_absolute() else project_root / value
     config = TestsetConfig(**values)

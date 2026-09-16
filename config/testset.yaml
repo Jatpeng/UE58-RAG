@@ -1,5 +1,6 @@
 input: "data/chunks/engine/chunks.jsonl"
 sources_output: "data/benchmark/ragas_sources.jsonl"
+knowledge_graph_output: "data/benchmark/ragas_knowledge_graph.json"
 testset_output: "data/benchmark/ragas_testset.jsonl"
 benchmark_output: "data/benchmark/ragas_cases.jsonl"
 documents: 180
@@ -22,3 +23,10 @@ embedding:
   model: "Qwen/Qwen3-Embedding-0.6B"
   device: "cuda"
   batch_size: 8
+personas:
+  - name: "UE_CPP_ENGINEER"
+    role_description: "Senior Unreal Engine C++ developer investigating runtime APIs, symbols, modules, and implementation details."
+  - name: "UE_EDITOR_TOOLS_ENGINEER"
+    role_description: "Unreal Engine editor tools developer working with Slate, details customization, plugins, and asset workflows."
+  - name: "UE_TECHNICAL_ARTIST"
+    role_description: "Technical artist integrating rendering, animation, Niagara, materials, and editor workflows with C++ systems."

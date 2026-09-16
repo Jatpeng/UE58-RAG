@@ -7,7 +7,10 @@ from pathlib import Path
 
 from ue_rag.eval import TestsetConfig as GenerationConfig
 from ue_rag.eval import generation_request_size, load_cases, sample_sources, write_generated_testset
-from scripts.generate_testset import _is_local_base_url
+from scripts.generate_testset import (
+    _install_tolerant_persona_lookup,
+    _is_local_base_url,
+)
 
 
 def _chunk(index: int, *, module: str) -> dict[str, object]:
@@ -30,6 +33,7 @@ def _config(tmp_path: Path, input_path: Path) -> GenerationConfig:
         {
             "input": input_path,
             "sources_output": tmp_path / "sources.jsonl",
+            "knowledge_graph_output": tmp_path / "knowledge_graph.json",
             "testset_output": tmp_path / "testset.jsonl",
             "benchmark_output": tmp_path / "cases.jsonl",
             "documents": 4,
@@ -41,6 +45,9 @@ def _config(tmp_path: Path, input_path: Path) -> GenerationConfig:
             "max_per_stratum": 2,
             "llm": {"model": "fake"},
             "embedding": {"model": "fake", "device": "cpu"},
+            "personas": [
+                {"name": "UE_CPP_ENGINEER", "role_description": "C++ developer"}
+            ],
         }
     )
 
@@ -97,3 +104,21 @@ def test_generation_request_oversamples_target_size(tmp_path: Path) -> None:
 
     assert config.testset_size == 2
     assert generation_request_size(config) == 3
+
+
+def test_tolerant_persona_lookup_accepts_role_suffix() -> None:
+    from ragas.testset.persona import Persona, PersonaList
+
+    _install_tolerant_persona_lookup()
+    personas = PersonaList(
+        personas=[
+            Persona(
+                name="UE_EDITOR_TOOLS_ENGINEER",
+                role_description="Editor tools developer",
+            )
+        ]
+    )
+
+    resolved = personas["UE_EDITOR_TOOLS_ENGINEER (Editor Tools Developer)"]
+
+    assert resolved.name == "UE_EDITOR_TOOLS_ENGINEER"
