@@ -11,16 +11,23 @@ request:
   robots_cache_ttl_seconds: 86400
 
 limits:
-  max_pages: 250
-  max_depth: 2
+  max_pages: 20000
+  max_depth: 8
 
 allowed_hosts:
   - "dev.epicgames.com"
 
 allowed_path_prefixes:
-  - "/documentation/en-us/unreal-engine/"
+  - "/documentation/en-us/unreal-engine"
 
 topics:
+  full_documentation:
+    seeds:
+      - "/documentation/en-us/unreal-engine/"
+    # An empty pattern list follows every in-scope documentation link. The
+    # host/path allowlist and robots.txt remain the safety boundary.
+    include_patterns: []
+
   gameplay:
     seeds:
       - "/documentation/en-us/unreal-engine/gameplay-systems-in-unreal-engine"

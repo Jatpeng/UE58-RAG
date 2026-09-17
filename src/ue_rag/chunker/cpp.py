@@ -284,8 +284,11 @@ class CPPSemanticChunker:
         )
 
     def _validate_document(self, document: UEDocument) -> None:
-        if document.source_type is not SourceType.ENGINE_SOURCE:
-            raise ValueError(f"Expected engine_source, received {document.source_type.value}")
+        if document.source_type not in {SourceType.ENGINE_SOURCE, SourceType.PROJECT_SOURCE}:
+            raise ValueError(
+                "Expected engine_source or project_source, "
+                f"received {document.source_type.value}"
+            )
         if document.engine_version != self.config.engine_version:
             raise ValueError(
                 f"Document engine version {document.engine_version!r} does not match "

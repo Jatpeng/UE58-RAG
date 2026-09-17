@@ -6,8 +6,23 @@ __pycache__/
 .coverage
 htmlcov/
 .env
+.env.*
+!.env.example
+config/*.local.yaml
+*.sqlite3-shm
+*.sqlite3-wal
 /work/
 /outputs/
+
+# Local Hugging Face packaging/download staging directories.
+/hf_package/
+/hf_download/
+
+# Local logs and temporary artifacts.
+*.log
+*.tmp
+.ruff_cache/
+.mypy_cache/
 
 data/raw/*
 data/parsed/*

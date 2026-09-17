@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import threading
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
@@ -93,7 +94,8 @@ class EmbeddingCache:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.connection = sqlite3.connect(self.path)
+        self.connection = sqlite3.connect(self.path, check_same_thread=False)
+        self._cache_lock = threading.Lock()
         self.connection.execute(
             "CREATE TABLE IF NOT EXISTS embeddings ("
             "cache_key TEXT PRIMARY KEY, dimension INTEGER NOT NULL, vector BLOB NOT NULL)"
@@ -101,9 +103,10 @@ class EmbeddingCache:
         self.connection.commit()
 
     def get(self, key: str) -> np.ndarray | None:
-        row = self.connection.execute(
-            "SELECT dimension, vector FROM embeddings WHERE cache_key = ?", (key,)
-        ).fetchone()
+        with self._cache_lock:
+            row = self.connection.execute(
+                "SELECT dimension, vector FROM embeddings WHERE cache_key = ?", (key,)
+            ).fetchone()
         if row is None:
             return None
         dimension, blob = row
@@ -111,11 +114,12 @@ class EmbeddingCache:
 
     def put(self, key: str, vector: np.ndarray) -> None:
         value = np.asarray(vector, dtype=np.float32).reshape(-1)
-        self.connection.execute(
-            "INSERT OR REPLACE INTO embeddings(cache_key, dimension, vector) VALUES (?, ?, ?)",
-            (key, value.size, value.tobytes()),
-        )
-        self.connection.commit()
+        with self._cache_lock:
+            self.connection.execute(
+                "INSERT OR REPLACE INTO embeddings(cache_key, dimension, vector) VALUES (?, ?, ?)",
+                (key, value.size, value.tobytes()),
+            )
+            self.connection.commit()
 
     def close(self) -> None:
         self.connection.close()
@@ -263,6 +267,7 @@ def embed_jsonl(
     provider: EmbeddingProvider,
     *,
     progress_every: int = 0,
+    progress: Any | None = None,
 ) -> EmbeddingRunSummary:
     """Embed JSONL records into a memory-mapped ``.npy`` plus ID/manifest sidecars."""
 
@@ -302,7 +307,9 @@ def embed_jsonl(
                     for index, (record_id, _) in enumerate(batch, start=row_start):
                         ids_file.write(json.dumps({"row": index, "id": record_id}, ensure_ascii=False) + "\n")
                     row_start += len(batch)
-                    if progress_every and row_start and row_start % progress_every < batch_size:
+                    if progress is not None:
+                        progress(row_start, total)
+                    elif progress_every and row_start and row_start % progress_every < batch_size:
                         print(f"Embedded: {row_start}/{total}", flush=True)
             assert matrix is not None
             matrix.flush()

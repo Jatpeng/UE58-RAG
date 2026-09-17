@@ -1,6 +1,8 @@
 engine:
   version: "5.8"
-  root: "E:/Epic Game/UE_5.8"
+  # Keep machine-specific paths out of Git. Set UE_ROOT before running the
+  # ingestion pipeline, or replace this empty value in a local checkout.
+  root: ""
 
 paths:
   engine_source: "Engine/Source"

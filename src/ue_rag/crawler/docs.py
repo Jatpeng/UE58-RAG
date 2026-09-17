@@ -418,6 +418,15 @@ class DocumentationCrawler:
 
         response, _, error = self._request_with_retries(self.config.robots_url)
         if response is None or response.status_code != 200:
+            # A stale robots cache is safer than silently ignoring robots.txt.
+            # Some CDNs intermittently reject a standalone refresh even though
+            # documentation pages remain available, so retain the last known
+            # policy and try refreshing it again on a later run.
+            if cache_path.is_file():
+                return RobotsRules(
+                    self.config.robots_url,
+                    cache_path.read_text(encoding="utf-8", errors="replace"),
+                )
             detail = error or (f"HTTP {response.status_code}" if response else "no response")
             raise RuntimeError(f"Unable to load robots.txt; crawl stopped: {detail}")
         cache_path.parent.mkdir(parents=True, exist_ok=True)

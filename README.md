@@ -1,526 +1,433 @@
 # Unreal Engine 5.8 Developer RAG
 
-## Project Goal
+**简体中文** | [English](README_EN.md)
 
-This project will provide high-quality Unreal Engine technical context to AI coding agents. The planned pipeline is:
+面向 Unreal Engine 5.8 开发者的本地 RAG 检索系统。项目将 UE 官方文档、
+引擎 C++ 源码、项目源码和 Blueprint 转换为结构化语义块，通过精确符号检索、
+全文检索、向量检索、混合召回和重排，为 AI 编程助手提供可追溯的技术上下文。
+
+> 仓库只发布程序、配置模板、测试和文档，不发布 Unreal Engine 源码、生成后的
+> 数据集、索引、Embedding、模型缓存或项目私有代码。
+
+## 主要能力
+
+- 使用 Tree-sitter 解析 UE C++ 类、结构体、枚举、函数、方法和字段。
+- 保留 `UCLASS`、`USTRUCT`、`UFUNCTION`、`UPROPERTY` 等 UE 反射宏。
+- 按类、函数、属性组和文档章节进行语义切块。
+- 使用 SQLite FTS5 完成关键词和精确 C++ 符号检索。
+- 使用 Qwen Embedding、Qdrant、RRF 和 Qwen Reranker 完成混合检索。
+- 支持模块、插件、类、符号、来源类型和 UE 版本过滤。
+- 通过 MCP 提供 `ue_search`、`ue_find_symbol`、`ue_search_docs` 和
+  `ue_search_source` 四个工具。
+- 包含检索 Benchmark、RAGAS 测试集生成和增量项目扫描能力。
+- 提供本地数据观测台，可视化语料构成、切块分布、索引状态和 Benchmark 指标。
+
+## 检索流程
 
 ```text
-UE Documentation
-UE Engine Source
-Lyra
-Project Source
-Blueprint
-
-→ Parse
-→ Semantic Chunk
-→ Dense + Sparse Retrieval
-→ RRF
-→ Reranker
-→ MCP
+UE 文档 / 引擎源码 / 项目源码 / Blueprint
+                    ↓
+              解析与语义切块
+                    ↓
+       ┌────────────┴────────────┐
+       ↓                         ↓
+关键词与精确符号检索       Embedding + Qdrant
+       └────────────┬────────────┘
+                    ↓
+                  RRF
+                    ↓
+                 Reranker
+                    ↓
+              MCP / AI 助手
 ```
 
-The project currently implements the foundation, shared data contracts,
-documentation ingestion/parser/chunker, Unreal Engine source inventory, and the
-Unreal C++ semantic parser. Embedding, indexing, retrieval, reranking, and MCP
-integration remain future tasks.
+## 环境要求
 
-## Environment
+- Windows 10/11
+- Python 3.11 或更高版本
+- 本机已安装 Unreal Engine 5.8 源码
+- 足够的磁盘空间；完整索引可能达到数 GB
+- 语义检索建议使用支持 CUDA 的 NVIDIA GPU
 
-- Python >= 3.11
+### 本地部署硬件建议
 
-## Install
+这套 RAG 可以按需要部署为仅关键词检索、Hybrid 检索或完整重排版本。比较均衡的
+完整本地配置是：**8 核 CPU、32 GB 内存、12～16 GB NVIDIA 显存，以及至少
+100 GB 可用 NVMe 空间**。
 
-Create a virtual environment:
+| 部署模式 | CPU | 内存 | GPU | 建议可用磁盘 |
+|---|---:|---:|---:|---:|
+| 仅 Lexical / 符号检索 | 4 核以上 | 8 GB 最低，16 GB 推荐 | 不需要 | 30～50 GB |
+| Hybrid，不启用重排 | 8 核以上 | 32 GB 推荐 | 8 GB 最低，12 GB 推荐 | 80～100 GB |
+| Hybrid + Reranker | 8～12 核 | 32～64 GB | 12 GB 最低，16 GB 推荐 | 100 GB 以上 |
+| RAG + 本地生成式 LLM | 12～16 核 | 64 GB | 24 GB 以上更合适 | 150 GB 以上 |
 
-```bash
-python -m venv .venv
-```
+以上磁盘空间不包含 Unreal Engine 5.8、引擎源码和游戏项目本身。以当前约
+1,693,105 个 C++ chunks 的完整语料为例，生成数据的实际占用约为：
 
-Activate it on Windows:
+| 数据 | 参考占用 |
+|---|---:|
+| SQLite 关键词索引 | 6.84 GiB |
+| Qdrant 数据 | 18.58 GiB |
+| Embedding 与缓存 | 14.00 GiB |
+| 语义切块 | 3.07 GiB |
+| 解析结果 | 2.38 GiB |
+| 合计 | 约 44.9 GiB |
+
+完整重建会先生成临时索引，再原子替换旧索引；重建期间可能同时存在新旧数据，
+因此完整 Hybrid 部署建议至少预留 80～100 GB，而不是只按最终文件大小准备空间。
+
+默认语义配置使用 `Qwen3-Embedding-0.6B`，批量为 16、最大输入长度为 2048；
+Reranker 使用 `Qwen3-Reranker-0.6B`，批量为 8、最大输入长度为 4096。启用重排的
+MCP 服务会同时加载 Embedding 和 Reranker：8 GB 显存可以通过降低 batch 和
+token 上限运行，12 GB 适合单人 Hybrid 检索，16 GB 更适合完整重排。如果还要在
+同一张显卡上运行本地生成式 LLM，建议使用 24 GB 或更多显存。
+
+没有 NVIDIA GPU 时仍可使用 Lexical、符号搜索、源码/Blueprint 解析和切块。
+Embedding 与 Reranker 也可以切换到 CPU，但全量生成向量和查询重排会明显变慢；
+这种机器建议先部署 Lexical 版本，或改用云端 Embedding。
+
+本项目的 RAG 服务负责返回检索上下文，不包含本地生成式 LLM。通过 MCP 将结果
+交给 Codex、Claude 等客户端时，不需要额外为生成式模型预留本机显存。
+
+## 拉取后快速开始
 
 ```powershell
-.venv\Scripts\activate
+git clone <仓库地址>
+cd ue58-rag
+
+powershell -ExecutionPolicy Bypass -File scripts/setup_local.ps1 `
+  -UnrealRoot "C:\Program Files\Epic Games\UE_5.8"
 ```
 
-Install the project and development dependencies:
+初始化脚本会：
 
-```bash
+1. 创建 `.venv` Python 虚拟环境。
+2. 安装关键词检索所需依赖。
+3. 验证本机 UE 版本和源码路径。
+4. 扫描并解析 UE C++ 源码。
+5. 生成语义块和本地 SQLite 检索索引。
+
+完整建库可能持续较长时间。只检查环境而不建库：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup_local.ps1 `
+  -UnrealRoot "C:\Program Files\Epic Games\UE_5.8" `
+  -ValidateOnly
+```
+
+## 启动 MCP
+
+本机 AI 客户端推荐使用 stdio：
+
+```powershell
+.\scripts\start_mcp.ps1
+```
+
+也可以启动 Streamable HTTP：
+
+```powershell
+.\scripts\start_mcp.ps1 -Transport streamable-http
+```
+
+默认 MCP 地址：
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
+局域网共享：
+
+```powershell
+.\scripts\start_mcp.ps1 `
+  -Transport streamable-http `
+  -HostAddress 0.0.0.0 `
+  -Port 8000
+```
+
+当前 MCP HTTP 服务自身不提供身份验证，请勿直接暴露到公网。公网部署应使用
+VPN，或在服务前增加带 HTTPS、身份认证和限流的网关。
+
+## 数据可视化
+
+双击仓库根目录的 `启动RAG数据管理台.bat`，系统会自动打开本地管理页面。页面支持：
+
+- 选择 UE 项目目录。
+- 查看当前 UE 源码、官方文档、Blueprint 和项目语料的来源位置与索引状态。
+- 使用示例问题或自定义问题测试 Symbol、Lexical 与 Hybrid 检索结果。
+- 扫描并预览新增、修改、删除和未变化文件。
+- 确认后增量解析 C++、配置与项目文档。
+- 原子替换关键词索引中的旧切块。
+- 可选同步 Embedding 和 Qdrant 向量索引。
+- 保存同步状态，下一次只处理变化文件。
+
+只生成无需服务的静态统计报告：
+
+```powershell
+python scripts/visualize.py --open
+```
+
+默认输出到 `outputs/rag_dashboard.html`。仪表盘从 SQLite 索引、Embedding 清单和
+Benchmark JSON 自动汇总语料规模、来源与模块分布、切块长度、向量覆盖率及检索
+质量。页面只写入聚合统计，不包含 UE 源码、文档正文或项目私有内容。
+
+比较指定的多份评测报告：
+
+```powershell
+python scripts/visualize.py `
+  --benchmark data/benchmark/benchmark_results.json `
+  --benchmark data/benchmark/hybrid_benchmark_results.json `
+  --output outputs/rag_dashboard.html
+```
+
+## 手动安装
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\activate
 pip install -e ".[dev]"
 ```
 
-## Configuration
+运行测试：
 
-Project settings live outside the Python source code:
-
-- `config/ue58.yaml` — engine version, engine paths, and data paths
-- `config/embedding.yaml` — future embedding provider and model settings
-- `config/retrieval.yaml` — future retrieval and reranking limits
-- `.env.example` — environment-specific values; copy it to `.env` when needed
-
-Do not commit a local `.env` file or generated Unreal Engine data.
-
-## Test
-
-```bash
-pytest
+```powershell
+python -m pytest
 ```
 
-## Shared data contracts
+Embedding 和 Reranker 是可选的大模型依赖：
 
-All future ingestion pipelines use the same Pydantic models:
-
-- `UEDocument` for parsed source units
-- `UEChunk` for semantic chunks
-- `RetrievalResult` for retrieval output
-- `SourceType` and `SourceScope` for consistent provenance
-
-Validated records can be persisted with `save_jsonl()` and loaded with
-`load_jsonl()`. Every record requires an explicit Unreal Engine version; callers
-must read that version from `config/ue58.yaml` rather than embedding it in code.
-
-## Documentation crawler
-
-T03 downloads raw Epic documentation HTML into `data/raw/docs/`. The crawler:
-
-- supports Gameplay, Programming, C++, Blueprint, Networking, Rendering,
-  Animation, AI, and UI topic allowlists;
-- checks `robots.txt`, caches successful rules for 24 hours, and stops safely
-  when no valid rules can be loaded;
-- applies a configurable delay, retry policy, depth limit, and page limit;
-- normalizes locale and the version read from `config/ue58.yaml` for URL
-  deduplication;
-- stores an append-only `manifest.jsonl` with source URL, fetch time, UE version,
-  checksum, and local cache path;
-- reuses successful cached pages and can continue link discovery after restart.
-
-Inspect the seed plan without network or file writes:
-
-```bash
-python scripts/ingest_docs.py --topic cpp --dry-run
+```powershell
+pip install -e ".[semantic]"
 ```
 
-Run a deliberately small crawl before increasing the configured limits:
+安装语义模型依赖后，仍需生成 Embedding 并建立 Qdrant 集合。完整过程参见
+[索引与检索](docs/03_索引与检索.md)和
+[本地 CUDA Embedding](docs/04_本地CUDA_Embedding.md)。
 
-```bash
-python scripts/ingest_docs.py --topic cpp --max-pages 10 --max-depth 1
+## MCP 客户端配置
+
+```json
+{
+  "mcpServers": {
+    "ue58-rag": {
+      "command": "C:/path/to/ue58-rag/.venv/Scripts/python.exe",
+      "args": ["C:/path/to/ue58-rag/scripts/mcp_server.py"]
+    }
+  }
+}
 ```
 
-Raw Epic documentation is intended for local indexing. Respect Epic's site
-rules, terms, and copyright; do not redistribute the downloaded corpus.
+服务注册以下工具：
 
-## Documentation parser
+| 工具 | 作用 |
+|---|---|
+| `ue_search` | 使用 lexical、symbol、hybrid 或 rerank 模式统一检索 |
+| `ue_find_symbol` | 精确查找 C++ 类、函数或属性符号 |
+| `ue_search_docs` | 只检索 UE 文档 |
+| `ue_search_source` | 只检索 UE 引擎源码，可按模块和插件过滤 |
 
-T04 converts the cached HTML into validated `UEDocument` JSONL while preserving
-page titles, heading paths, paragraphs, lists, links, callouts, tables, images,
-and fenced code blocks. Navigation, footers, sidebars, cookie UI, table-of-content
-menus, and code-copy controls are removed.
+## 项目结构
 
-```bash
-python scripts/parse_docs.py
+```text
+config/          配置模板
+data/            本地生成数据；大部分内容被 Git 忽略
+docs/            中文教学与部署文档
+scripts/         数据处理、建库、查询、评测和服务入口
+src/ue_rag/      Python 核心实现
+tests/           自动化测试
 ```
 
-The parser writes:
+## 数据库配置
 
-- `data/parsed/docs/documents.jsonl` — clean Markdown plus structured metadata
-- `data/parsed/docs/issues.jsonl` — downloaded placeholders or malformed pages
-  that could not safely become documents
+本项目有两个索引：SQLite FTS5 关键词索引和 Qdrant 向量索引。两者都属于本机生成
+数据，不应提交到 GitHub。
 
-Parsing is deterministic: rerunning it replaces the output with the same IDs and
-ordering for an unchanged crawl manifest.
+### SQLite 关键词索引
 
-## Documentation semantic chunker
+配置文件为 `config/lexical.yaml`：
 
-T05 splits parsed documentation by its H1/H2/H3 hierarchy. A section remains
-whole until it exceeds the configured 1500-token maximum; oversized sections are
-then split around an 800-token target with 125-token overlap. Every secondary
-part repeats its complete heading path.
-
-```bash
-python scripts/chunk_docs.py
+```yaml
+index_path: "data/index/lexical.sqlite3"
+batch_size: 512
+symbol_top_k: 10
+lexical_top_k: 10
 ```
 
-The output is written to `data/chunks/docs/chunks.jsonl`. Each `UEChunk` retains
-the page title, section path, source URL, UE version, source type, source file,
-and deterministic document/chunk IDs. Fenced code blocks are indivisible; a code
-block larger than the hard limit is preserved intact and explicitly marked as an
-oversized atomic block.
+从 chunks 重新构建：
 
-Token counts currently use the deterministic lightweight counter configured in
-`config/docs_chunker.yaml`. The counter is replaceable so a later model-specific
-tokenizer can be introduced without coupling chunking to an embedding provider.
-
-## Unreal Engine source scanner
-
-T06 inventories the configured Unreal Engine installation without parsing C++.
-Set `engine.root` in `config/ue58.yaml` to the installation directory that
-contains `Engine/`. Before scanning, the CLI validates `Engine/Build/Build.version`
-against the configured major/minor version.
-
-```bash
-python scripts/ingest_engine.py --dry-run
-python scripts/ingest_engine.py
+```powershell
+python scripts/build_lexical_index.py `
+  --rebuild `
+  --batch-size 2048 `
+  --progress-every 100000
 ```
 
-The scanner covers `Runtime`, `Editor`, `Developer`, and `Programs` beneath
-`Engine/Source`, plus source trees beneath `Engine/Plugins`. It includes `.h`,
-`.cpp`, `.inl`, and `.Build.cs`, while excluding generated/cache directories,
-ThirdParty source, plugin content, SDKs, resources, and shaders outside plugin
-`Source` directories.
+### Qdrant 本地模式（默认）
 
-`data/parsed/engine/files.jsonl` records the engine-relative path, module,
-plugin, file type, UE version, byte size, and SHA-256 for every file. File-system
-errors are written to `data/parsed/engine/issues.jsonl`.
+默认配置为 `config/qdrant.yaml`：
 
-## Unreal C++ semantic parser
-
-T07 parses inventoried `.h`, `.cpp`, and `.inl` files with Tree-sitter C++ and
-a length-preserving Unreal macro scanner. It emits one `UEDocument` per class,
-struct, enum, free function, method, constructor, or field instead of treating a
-whole source file as one document. `UCLASS`, `USTRUCT`, `UENUM`, `UINTERFACE`,
-`UFUNCTION`, `UPROPERTY`, and `UDELEGATE` annotations remain attached to their
-symbols; export macros and parser-only UE annotations are masked without moving
-source locations.
-
-```bash
-python scripts/parse_engine.py
+```yaml
+collection: "ue58_global"
+path: "data/qdrant"
+url: null
+batch_size: 64
+distance: "cosine"
 ```
 
-The full output is written to `data/parsed/engine/documents.jsonl`, with
-operational failures in `data/parsed/engine/parse_issues.jsonl`. Tree-sitter
-recovery state is recorded separately at file and symbol level so partially
-recoverable Unreal syntax is visible to later pipeline stages. Filtered smoke
-runs must use another output path:
+`url: null` 表示使用本地嵌入式 Qdrant，数据保存在 `data/qdrant`。向量数据准备好
+后执行：
 
-```bash
-python scripts/parse_engine.py \
-  --path-contains CharacterMovementComponent \
-  --limit-files 20 \
-  --output work/character_movement.jsonl
-```
-
-## C++ semantic chunker
-
-T08 converts C++ symbol documents into retrieval-ready `UEChunk` records. Each
-chunk starts with a semantic header containing UE version, module, class, symbol,
-symbol type, and file. Functions normally remain whole; oversized functions are
-split on source lines with overlap and the complete context header repeated in
-every part. Classes are emitted as standalone type summaries, enums and structs
-remain independent chunks, and fields in the same class/file are merged into a
-`property_group` chunk with the original field symbols and document IDs retained
-in metadata.
-
-```bash
-python scripts/chunk_engine.py
-```
-
-The output is written to `data/chunks/engine/chunks.jsonl`. For a smoke run on a
-filtered parser output, override both paths:
-
-```bash
-python scripts/chunk_engine.py \
-  --input work/t07_character_movement.jsonl \
-  --output work/t08_character_movement.jsonl
-```
-
-## Embedding provider
-
-T09 adds a replaceable `EmbeddingProvider` interface and a Qwen3 implementation
-backed by Sentence Transformers. The provider supports document/query encoding,
-configurable batches, automatic CPU/GPU selection, L2 normalization, and a
-persistent SQLite text/vector cache. Models are loaded lazily, so tests and CLI
-help do not download model weights.
-
-```bash
-python scripts/embed.py \
-  --input data/chunks/engine/chunks.jsonl \
-  --output data/embeddings/engine/embeddings.npy
-```
-
-For large C++ chunks, use a bounded batch and token limit and show progress:
-
-```bash
-python scripts/embed.py \
-  --input data/chunks/engine/chunks.jsonl \
-  --output data/embeddings/engine/embeddings.npy \
-  --batch-size 4 --max-length 2048 --progress-every 10000
-```
-
-On a CUDA-capable machine, set `device: cuda` in `config/embedding.yaml` (the
-default configuration uses CUDA) or override it in a dedicated config. Verify
-the runtime before a long run with `python -c "import torch; print(torch.cuda.is_available())"`.
-
-The command writes a NumPy float32 matrix plus `.ids.jsonl` and
-`.manifest.json` sidecars. The embedding model, device, batch size, cache, and
-default output path are configured in `config/embedding.yaml`. The artifact
-writer uses a two-pass JSONL stream and memory mapping so the full corpus does
-not need to fit in RAM.
-
-## Qdrant vector store
-
-T10 adds the `QdrantVectorStore` integration. It creates the configured
-collection, indexes searchable metadata fields, batch-upserts vectors, and
-supports exact filters for engine version, source type, module, plugin, class,
-and symbol. Upserts use deterministic UUIDs derived from chunk IDs and compare
-content hashes, so unchanged repeats are skipped while changed chunks are
-updated. A dependency-free in-memory mode is available for tests and smoke
-runs.
-
-```bash
-python scripts/build_index.py \
-  --input data/chunks/engine/chunks.jsonl \
-  --vectors data/embeddings/engine/embeddings.npy \
+```powershell
+python scripts/build_index.py `
+  --input data/chunks/engine/chunks.jsonl `
+  --vectors data/embeddings/engine/embeddings.npy `
   --ids data/embeddings/engine/embeddings.npy.ids.jsonl
 ```
 
-Connection and collection settings live in `config/qdrant.yaml`. The command
-prints total, added, updated, skipped, and failed counts. Use `--recreate` only
-when intentionally rebuilding the collection.
-
-For the full UE5.8 corpus, use the disk-backed Qdrant Server profile
-`config/qdrant_server.yaml` (the embedded `path` mode is intended for tests and
-small datasets). Start Qdrant on port 6333, then pass
-`--qdrant-config config/qdrant_server.yaml` to the build and query commands.
-
-## Keyword and symbol search
-
-T11 adds a SQLite FTS5 lexical index for C++ chunks. It indexes symbols, class
-and function names, UE macro names, file paths, and source text. Exact symbol,
-class, function, and merged-property aliases are resolved first; lexical FTS
-results then fill the remaining slots. The same `RetrievalResult` contract is
-returned for symbol, lexical, and hybrid searches, with filters for engine
-version, source type, module, plugin, class, and symbol.
-
-```bash
-python scripts/build_lexical_index.py \
-  --input data/chunks/engine/chunks.jsonl \
-  --index data/index/lexical.sqlite3
-
-# Recommended for a clean full-corpus build:
-python scripts/build_lexical_index.py \
-  --rebuild --batch-size 2048 --progress-every 100000
-
-python scripts/query.py \
-  "UCharacterMovementComponent::MaxWalkSpeed" \
-  --mode symbol \
-  --index data/index/lexical.sqlite3
-```
-
-The index builder streams JSONL in bounded transactions and reports added,
-updated, skipped, and failed records. `--rebuild` writes a fresh index with a
-bulk SQLite path and atomically replaces the target only after a successful
-build; `--progress-every` prints periodic chunk counts for long builds.
-Generated SQLite indexes are local artifacts and are excluded from Git.
-
-## Hybrid retrieval
-
-T12 combines the Qdrant dense results and SQLite lexical results with
-Reciprocal Rank Fusion (RRF). The configured dense and sparse Top-K lists are
-merged into a final `fusion_top_k`; each result retains both source ranks and
-the computed fusion score. An embedding provider can generate the query vector,
-or a precomputed vector can be supplied for deterministic/offline calls.
-
-```bash
-python scripts/hybrid_query.py \
-  "UE5.8 角色移动网络预测" \
-  --qdrant-config config/qdrant_server.yaml \
-  --lexical-config config/lexical.yaml
-```
-
-RRF and Top-K parameters are configured in `config/retrieval.yaml`. T12 does
-not require an LLM API; it only combines already indexed dense and lexical
-results.
-
-## Reranker
-
-T13 adds a model-independent `Reranker` interface and a Qwen3-Reranker adapter.
-The `RAGQueryPipeline` composes any retriever with any reranker, defaults to
-retrieving the configured candidate set and returning `rerank_top_k` results,
-and preserves the dense/sparse ranks in result metadata. Batch size, device,
-model, and final top-k are configured in `config/reranker.yaml`.
-
-```bash
-python scripts/rerank_query.py \
-  "UE5.8 角色移动网络预测" \
-  --qdrant-config config/qdrant.yaml \
-  --lexical-config config/lexical.yaml
-```
-
-The Qwen model is loaded only when the command is run; tests inject a local
-fake CrossEncoder and do not download weights.
-
-## Retrieval benchmark
-
-T14 adds benchmark cases and ranking metrics: Hit@1/3/5/10, Recall@5/10, MRR,
-and nDCG. Cases can be split across category JSONL files; reports contain both
-overall macro averages and per-category scores. Optional baseline thresholds
-make the CLI return exit code 1 when a change regresses a configured metric.
-
-```bash
-python scripts/evaluate.py \
-  --input data/benchmark/symbol.jsonl \
-  --index data/index/lexical.sqlite3
-```
-
-Results are written to `data/benchmark/benchmark_results.json` and
-`benchmark_results.md`. Benchmark evaluation does not invent scores when an
-index is unavailable; it fails with a clear input error instead.
-
-## Synthetic testset generation
-
-RAGAS 0.4 can generate traceable questions, reference answers, and reference
-contexts from a bounded sample of the UE corpus. The generator streams the
-full chunk JSONL and keeps only a module-balanced sample in memory. Existing
-`Qwen3-Embedding-0.6B` embeddings are used locally; an OpenAI-compatible chat
-model is required to generate questions and answers.
+首次建立或需要完全重建集合时，加上 `--recreate`：
 
 ```powershell
-pip install -e ".[eval]"
-$env:OPENAI_API_KEY = "your-key"
-python scripts/generate_testset.py
-
-python scripts/evaluate.py `
-  --input data/benchmark/ragas_cases.jsonl `
-  --index data/index/lexical.sqlite3
+python scripts/build_index.py `
+  --input data/chunks/engine/chunks.jsonl `
+  --vectors data/embeddings/engine/embeddings.npy `
+  --ids data/embeddings/engine/embeddings.npy.ids.jsonl `
+  --recreate
 ```
 
-Use `python scripts/generate_testset.py --prepare-only` to validate source
-sampling without calling an LLM. A local OpenAI-compatible server can be used
-with `--base-url` and `--model`. Generation settings and output paths live in
-`config/testset.yaml`. Native RAGAS rows are written to
-`ragas_testset.jsonl`; trace markers are converted automatically into the
-existing retrieval benchmark schema in `ragas_cases.jsonl`.
+### Qdrant Server 模式
 
-## Unified query CLI
+仓库提供 `config/qdrant_server.yaml`，用于连接本机或远程 Qdrant Server：
 
-T15 makes `scripts/query.py` the single user-facing query entry point. It
-supports symbol, lexical, hybrid, and rerank modes, optional metadata filters,
-precomputed query vectors for offline use, and human-readable or JSON output.
-Lexical mode is the default so the command can run without model weights; the
-hybrid and rerank modes connect the configured Qdrant, embedding, and reranker
-stages when those services/artifacts are available.
-
-```bash
-python scripts/query.py \
-  "UCharacterMovementComponent::MaxWalkSpeed" \
-  --mode symbol \
-  --index data/index/lexical.sqlite3
+```yaml
+collection: "ue58_global"
+path: null
+url: "http://127.0.0.1:6333"
+batch_size: 128
+distance: "cosine"
+timeout_seconds: 60
 ```
 
-Use `--mode hybrid` for dense + lexical RRF, or `--mode rerank` for the final
-candidate reranking pipeline.
+启动本地 Qdrant Server：
 
-## MCP server
-
-T16 exposes the retrieval pipeline through the official MCP Python SDK. The
-server registers four tools: `ue_search`, `ue_find_symbol`, `ue_search_docs`,
-and `ue_search_source`. It runs in lexical-only mode by default; pass
-`--enable-dense` to enable Qdrant/embedding hybrid search and
-`--enable-rerank` to add the reranker stage.
-
-```bash
-python scripts/mcp_server.py
+```powershell
+.\scripts\start_qdrant.ps1
 ```
 
-The default transport is stdio for Cursor/Claude-style clients. Use
-`--transport sse` or `--transport streamable-http` when an HTTP transport is
-required. Install the optional server dependency with `pip install "mcp[cli]"`.
+向 Server 导入向量：
 
-## Project RAG scanner
-
-T17 adds a project-scoped scanner for the second-stage RAG corpus. It reads the
-project root from `config/project_scanner.yaml` or `--project-root`, scans
-`Source/`, `Plugins/`, `Config/`, and `Docs/`, and records project/engine source
-provenance, module/plugin names, file type, size, and SHA-256. Generated folders
-such as `Binaries`, `Intermediate`, `Saved`, and `DerivedDataCache` are ignored.
-
-```bash
-python scripts/ingest_project.py --project-root D:/Work/MyGame --dry-run
-python scripts/ingest_project.py --project-root D:/Work/MyGame
+```powershell
+python scripts/build_index.py `
+  --qdrant-config config/qdrant_server.yaml `
+  --input data/chunks/engine/chunks.jsonl `
+  --vectors data/embeddings/engine/embeddings.npy `
+  --ids data/embeddings/engine/embeddings.npy.ids.jsonl `
+  --recreate
 ```
 
-The inventory is written to `data/parsed/project/files.jsonl`; filesystem issues
-are written separately to `issues.jsonl`. The output is ready for the next
-incremental project-indexing task and does not modify the project itself.
+启动 MCP 时也必须使用同一个 Qdrant 配置：
 
-## Incremental Project RAG
-
-T18 compares two project inventories by relative path and SHA-256. Added and
-modified files are the only records sent through caller-provided
-parse → chunk → embed → upsert stages; deleted paths are sent to a delete hook,
-and unchanged files are skipped. The deterministic change plan is written as
-JSONL for auditability and can be generated independently of the indexing
-backend.
-
-```bash
-python scripts/incremental_project.py \
-  --previous data/parsed/project/files.previous.jsonl \
-  --current data/parsed/project/files.jsonl \
-  --output data/parsed/project/changes.jsonl
+```powershell
+python scripts/mcp_server.py `
+  --qdrant-config config/qdrant_server.yaml `
+  --enable-dense
 ```
 
-The orchestration API is `IncrementalProjectIndexer`; it keeps project updates
-bounded to changed files and leaves parser/chunker/model choices injectable.
+如果 Qdrant Server 需要 API Key，可在配置中增加环境变量名称，并在启动前设置密钥：
 
-## Blueprint exporter
-
-T19 normalizes connector-neutral Blueprint JSON into the shared `UEDocument`
-schema. Each asset produces separate summary, graph, function, variables, and
-components documents with deterministic IDs, project scope, asset/package
-provenance, graph node/link counts, and structured JSON content.
-
-```bash
-python scripts/export_blueprint.py \
-  --input data/raw/project/blueprints.jsonl \
-  --output data/parsed/project/blueprints.jsonl
+```yaml
+api_key_env: "QDRANT_API_KEY"
 ```
 
-The exporter methods mirror the future Unreal MCP operations:
-`export_blueprint_summary`, `export_blueprint_graph`,
-`export_blueprint_function`, `export_blueprint_variables`, and
-`export_blueprint_components`.
-
-## Blueprint RAG chunks
-
-T20 converts the exported Blueprint documents into `UEChunk` records. Summary,
-function, variable, and component views remain whole; oversized graph views are
-split at node lines while repeating asset, graph, package, parent-class, and
-symbol context in every part. The resulting chunks use `source_type=blueprint`
-and can flow through the existing embedding, lexical, Qdrant, hybrid, reranker,
-and MCP stages.
-
-```bash
-python scripts/chunk_blueprint.py \
-  --input data/parsed/project/blueprints.jsonl \
-  --output data/chunks/project/blueprints.jsonl
+```powershell
+$env:QDRANT_API_KEY = "your-qdrant-api-key"
 ```
 
-## CLI
+不要把真实 API Key 写入 YAML、`.env.example` 或 Git。`config/*.local.yaml`、`.env`
+和数据库文件均应留在本机。
 
-Implemented commands expose their full options; later pipeline commands remain
-help-only skeletons until their corresponding task is complete.
+### 从 Hugging Face 恢复向量
 
-```bash
-python scripts/ingest_docs.py --help
-python scripts/parse_docs.py --help
-python scripts/chunk_docs.py --help
-python scripts/ingest_engine.py --help
-python scripts/parse_engine.py --help
-python scripts/chunk_engine.py --help
-python scripts/embed.py --help
-python scripts/build_index.py --help
-python scripts/build_lexical_index.py --help
-python scripts/hybrid_query.py --help
-python scripts/rerank_query.py --help
-python scripts/query.py --help
-python scripts/evaluate.py --help
-python scripts/generate_testset.py --help
-python scripts/mcp_server.py --help
-python scripts/export_blueprint.py --help
-python scripts/chunk_blueprint.py --help
+如果已经上传了兼容的 Dataset，可以双击仓库根目录的
+`从HuggingFace下载并重建索引.bat`，或手动执行：
+
+```powershell
+hf download YOUR_USERNAME/ue58-rag-embeddings `
+  --repo-type=dataset `
+  --local-dir=hf_download `
+  --include "engine/*"
 ```
 
-## Current Scope
+然后按照上面的 Qdrant 配置执行 `build_index.py`。chunks、向量矩阵和
+`embeddings.npy.ids.jsonl` 必须来自同一次构建，不能混用不同版本的数据。
 
-The T01–T20 implementation chain is complete. The next step is to evaluate the
-full corpus with a real project, embeddings, Qdrant collection, and benchmark
-cases before optimizing further.
+## GitHub 提交边界
+
+应该提交：
+
+- `src/`、`scripts/`、`tests/`
+- `config/*.yaml` 配置模板
+- `README.md`、`README_EN.md`、`docs/`
+- `.env.example`、`.gitignore`、`.gitattributes`
+- 一键启动、下载和重建索引脚本
+
+不应提交：
+
+- Unreal Engine 源码、项目源码和下载的官方文档正文
+- `data/raw/`、`data/parsed/`、`data/chunks/`
+- `data/embeddings/`、`data/index/`、`data/qdrant/`
+- `data/qdrant_server/`、`data/qdrant_server_incomplete_*/`
+- `work/`、`outputs/`、`hf_package/`、`hf_download/`
+- `*.sqlite3`、模型缓存、`__pycache__/`、`.venv/`
+- `.env`、本地配置和任何 API Key
+
+提交前检查：
+
+```powershell
+git status --short --ignored
+git check-ignore -v data/embeddings/engine/embeddings.npy
+git check-ignore -v data/qdrant/collection/ue58_global/storage.sqlite
+git check-ignore -v hf_package
+```
+
+当前本地生成数据可以删除并重新生成，但删除前应确认不再需要：
+
+```text
+data/raw/       可重新爬取或扫描
+data/parsed/    可由 raw 重新解析
+data/chunks/    可由 parsed 重新切块
+data/index/     可由 chunks 重新构建
+data/embeddings/可由 chunks 重新向量化，或从 Hugging Face 恢复
+data/qdrant/    可由 embeddings 重新导入
+work/           临时文件和日志
+outputs/        报告和仪表盘输出
+hf_package/     Hugging Face 上传暂存包
+hf_download/    Hugging Face 下载暂存目录
+```
+
+删除这些目录不会删除程序代码，但会导致后续重新生成或重新下载；不要删除
+`src/`、`scripts/`、`tests/`、`config/` 和 `docs/`。
+
+## 文档
+
+- [中文文档目录](docs/README.md)
+- [GitHub 拉取与使用](docs/09_GitHub使用指南.md)
+- [文档与源码处理](docs/02_文档与源码处理.md)
+- [索引与检索](docs/03_索引与检索.md)
+- [MCP、项目和 Blueprint](docs/05_MCP项目与Blueprint.md)
+- [测试、排错与上线](docs/06_测试排错与上线.md)
+- [Benchmark 评测指南](docs/08_Benchmark评测指南.md)
+- [完整英文说明](README_EN.md)
+
+## 数据与授权
+
+生成的 UE 源码语料、JSONL、SQLite 索引、Embedding 和 Qdrant 数据均不会提交。
+每位使用者需要使用自己有权访问的 UE 5.8 安装在本机建库。公开或向第三方提供
+检索服务前，请确认符合 Epic Games 的许可条款及所属项目的保密要求。
+
+## 参与贡献
+
+参见 [CONTRIBUTING.md](CONTRIBUTING.md)。提交前请确保：
+
+- 没有 Unreal Engine 源码、项目私有源码或生成索引进入 Git。
+- 没有 `.env`、API Key、访问令牌或本机绝对路径。
+- `python -m pytest` 全部通过。

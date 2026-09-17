@@ -481,7 +481,10 @@ def test_filtered_inventory_run_requires_positive_limit(tmp_path: Path) -> None:
         parser.parse_inventory(limit_files=0)
 
 
-def test_workspace_cpp_config_uses_inventory_and_ue_version() -> None:
+def test_workspace_cpp_config_uses_inventory_and_ue_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("UE_ROOT", str(tmp_path / "UE_5.8"))
     config = load_cpp_parser_config()
 
     assert config.engine_version == "5.8"

@@ -86,9 +86,13 @@ def load_cpp_parser_config(
         parser_config = yaml.safe_load(config_file)
 
     project_root = ue_path.parent.parent
-    configured_root = str(ue_config["engine"]["root"]).strip()
+    configured_root = os.environ.get("UE_ROOT", "").strip()
     if not configured_root:
-        raise ValueError(f"engine.root is empty in {ue_path}")
+        configured_root = str(ue_config["engine"]["root"]).strip()
+    if not configured_root:
+        raise ValueError(
+            f"Unreal Engine root is not configured; set UE_ROOT or engine.root in {ue_path}"
+        )
     engine_root = Path(configured_root).expanduser()
     if not engine_root.is_absolute():
         engine_root = project_root / engine_root
@@ -165,7 +169,12 @@ class UnrealCPPParser:
         self._api_macro = re.compile(config.api_macro_pattern.encode("ascii"))
 
     def parse_source(
-        self, source: bytes, file_record: EngineFileRecord
+        self,
+        source: bytes,
+        file_record: EngineFileRecord,
+        *,
+        source_scope: SourceScope = SourceScope.GLOBAL,
+        source_type: SourceType = SourceType.ENGINE_SOURCE,
     ) -> tuple[list[UEDocument], bool]:
         """Parse one source buffer and return symbol documents plus AST error state."""
 
@@ -206,6 +215,8 @@ class UnrealCPPParser:
                 macro_end_offsets,
                 file_record,
                 tree.root_node.has_error,
+                source_scope,
+                source_type,
             )
             if document.id in seen_document_ids:
                 continue
@@ -487,6 +498,8 @@ class UnrealCPPParser:
         macro_end_offsets: list[int],
         file_record: EngineFileRecord,
         ast_has_error: bool,
+        source_scope: SourceScope,
+        source_type: SourceType,
     ) -> UEDocument:
         attached_macros = _attached_macros(
             symbol.node.start_byte, source, macro_spans, macro_end_offsets
@@ -509,8 +522,8 @@ class UnrealCPPParser:
         return UEDocument(
             id=identifier,
             engine_version=file_record.engine_version,
-            source_scope=SourceScope.GLOBAL,
-            source_type=SourceType.ENGINE_SOURCE,
+            source_scope=source_scope,
+            source_type=source_type,
             content=content,
             title=symbol.symbol,
             module=file_record.module,

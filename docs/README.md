@@ -9,5 +9,7 @@
 5. [MCP、项目和 Blueprint](05_MCP项目与Blueprint.md)
 6. [测试、排错与上线](06_测试排错与上线.md)
 7. [云端 Embedding 与 LLM（可选）](07_云端Embedding与LLM.md)
+8. [Benchmark 评测指南](08_Benchmark评测指南.md)
+9. [GitHub 拉取与使用](09_GitHub使用指南.md)
 
 当前项目使用本地 CUDA Qwen Embedding；如果只需要基础搜索，可以先完成第 3 篇并使用 Lexical 模式。

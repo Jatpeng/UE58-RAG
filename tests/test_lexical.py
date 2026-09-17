@@ -61,6 +61,21 @@ def test_upsert_is_idempotent_and_updates_changed_content(tmp_path: Path) -> Non
     assert (changed.total, changed.added, changed.updated, changed.skipped) == (1, 0, 1, 0)
 
 
+def test_replace_file_chunks_removes_stale_rows_atomically(tmp_path: Path) -> None:
+    path = "Project/Game/A.h"
+    old = make_chunk("old", "OldSymbol", "old body").model_copy(update={"file_path": path})
+    new = make_chunk("new", "NewSymbol", "new body").model_copy(update={"file_path": path})
+    with LexicalIndex(tmp_path / "index.sqlite3") as index:
+        index.upsert([old])
+
+        removed, summary = index.replace_file_chunks([path], [new])
+
+        assert removed == [old.id]
+        assert summary.added == 1
+        assert index.search_symbol("OldSymbol") == []
+        assert index.search_symbol("NewSymbol")[0].chunk_id == new.id
+
+
 def test_exact_symbol_search_prioritizes_symbol_over_class_and_function(tmp_path: Path) -> None:
     with LexicalIndex(tmp_path / "index.sqlite3") as index:
         index.upsert(

@@ -34,8 +34,8 @@ stdio 模式等待 JSON-RPC 消息。不要在终端中手动敲空行，否则�
 {
   "mcpServers": {
     "ue-rag": {
-      "command": "python",
-      "args": ["E:/UE5.8 RAG/scripts/mcp_server.py"]
+      "command": "C:/path/to/ue58-rag/.venv/Scripts/python.exe",
+      "args": ["C:/path/to/ue58-rag/scripts/mcp_server.py"]
     }
   }
 }
@@ -62,6 +62,10 @@ http://127.0.0.1:8000/mcp
 - `ue_search_docs`：仅搜索文档。
 - `ue_search_source`：仅搜索引擎源码。
 
+管理台还提供“RAG 检索测试”区域。用户可以选择精确符号、关键词或 Hybrid 模式，
+按数据来源和模块筛选，并直接查看命中符号、文件路径、检索分数、Dense/Sparse 排名
+以及实际返回给 AI 助手的上下文片段。页面内置常见 UE 示例问题，也支持输入自定义问题。
+
 ## 3. 扫描真实项目
 
 ```powershell
@@ -82,14 +86,18 @@ data/parsed/project/issues.jsonl
 
 ## 4. 增量更新
 
-```powershell
-python scripts/incremental_project.py `
-  --previous data/parsed/project/files.previous.jsonl `
-  --current data/parsed/project/files.jsonl `
-  --output data/parsed/project/changes.jsonl
-```
+双击仓库根目录的 `启动RAG数据管理台.bat`，在浏览器页面中完成增量更新：
 
-系统会区分新增、修改、删除和未变化文件，只把变化部分送入后续解析和索引流程。
+1. 点击“选择文件夹”，选择包含 `Source/` 的 UE 项目目录。
+2. 点击“扫描变更”，页面会展示新增、修改、删除和未变化文件数量及明细。
+3. 根据需要启用“同步向量索引”。
+4. 点击“确认同步”。
+
+管理台只解析新增和修改文件；修改、删除文件对应的旧切块会先从索引清理，再写入
+新切块。同步成功后保存文件哈希状态，下一次扫描会自动跳过未变化文件。
+
+如果未启用向量同步，关键词索引仍会更新，但 Hybrid 查询中的项目数据不会同步到
+Qdrant。完整混合检索建议保持该选项开启。
 
 ## 5. Blueprint 数据
 

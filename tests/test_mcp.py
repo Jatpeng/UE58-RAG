@@ -64,6 +64,14 @@ def test_mcp_tools_validate_limits_and_queries() -> None:
 
 
 def test_mcp_server_registers_when_sdk_is_installed() -> None:
-    server = create_mcp_server(MCPTools(FakeService()))
+    server = create_mcp_server(MCPTools(FakeService()), host="0.0.0.0", port=8123)
 
     assert server is not None
+    assert server.settings.host == "0.0.0.0"
+    assert server.settings.port == 8123
+
+
+@pytest.mark.parametrize("port", [0, 65536])
+def test_mcp_server_rejects_invalid_port(port: int) -> None:
+    with pytest.raises(ValueError, match="port must be between"):
+        create_mcp_server(MCPTools(FakeService()), port=port)

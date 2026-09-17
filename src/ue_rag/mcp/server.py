@@ -96,16 +96,25 @@ def result_payload(result: RetrievalResult) -> dict[str, Any]:
     return result.model_dump(mode="json")
 
 
-def create_mcp_server(tools: MCPTools | None = None) -> Any:
+def create_mcp_server(
+    tools: MCPTools | None = None,
+    *,
+    host: str = "127.0.0.1",
+    port: int = 8000,
+) -> Any:
     """Register the four UE tools on an official FastMCP server instance."""
 
     if tools is None:
         raise ValueError("MCPTools instance is required")
+    if not host.strip():
+        raise ValueError("host must be non-empty")
+    if not 1 <= port <= 65535:
+        raise ValueError("port must be between 1 and 65535")
     try:
         from mcp.server.fastmcp import FastMCP
     except ImportError as error:
         raise RuntimeError("mcp is required to run the MCP server; install mcp[cli]") from error
-    server = FastMCP("ue58-rag")
+    server = FastMCP("ue58-rag", host=host, port=port)
 
     @server.tool()
     def ue_search(

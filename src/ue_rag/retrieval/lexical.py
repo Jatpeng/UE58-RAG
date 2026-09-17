@@ -162,6 +162,52 @@ class LexicalIndex:
             raise
         return summary
 
+    def chunk_ids_for_file_paths(self, file_paths: Sequence[str]) -> list[str]:
+        """Return chunk IDs belonging to exact source paths."""
+
+        values = list(dict.fromkeys(path for path in file_paths if path))
+        found: list[str] = []
+        for start in range(0, len(values), 500):
+            batch = values[start : start + 500]
+            placeholders = ",".join("?" for _ in batch)
+            rows = self.connection.execute(
+                f"SELECT chunk_id FROM chunks WHERE file_path IN ({placeholders}) ORDER BY chunk_id",
+                batch,
+            ).fetchall()
+            found.extend(row[0] for row in rows)
+        return found
+
+    def replace_file_chunks(
+        self,
+        file_paths: Sequence[str],
+        chunks: Sequence[UEChunk],
+    ) -> tuple[list[str], LexicalIngestSummary]:
+        """Atomically remove old file chunks and insert their replacements."""
+
+        old_ids = self.chunk_ids_for_file_paths(file_paths)
+        summary = LexicalIngestSummary(0, 0, 0, 0, 0)
+        self.connection.execute("BEGIN")
+        try:
+            for start in range(0, len(old_ids), 500):
+                batch = old_ids[start : start + 500]
+                placeholders = ",".join("?" for _ in batch)
+                self.connection.execute(
+                    f"DELETE FROM exact_symbols WHERE chunk_id IN ({placeholders})", batch
+                )
+                self.connection.execute(
+                    f"DELETE FROM chunks_fts WHERE chunk_id IN ({placeholders})", batch
+                )
+                self.connection.execute(
+                    f"DELETE FROM chunks WHERE chunk_id IN ({placeholders})", batch
+                )
+            for chunk in chunks:
+                summary = self._upsert_one(summary, chunk)
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
+        return old_ids, summary
+
     def index_jsonl(
         self,
         input_path: str | Path,
@@ -169,6 +215,8 @@ class LexicalIndex:
         batch_size: int = 512,
         bulk_build: bool = False,
         progress_every: int = 0,
+        progress: Any | None = None,
+        total_hint: int | None = None,
     ) -> LexicalIngestSummary:
         """Stream and validate UEChunk JSONL in bounded batches."""
 
@@ -194,10 +242,14 @@ class LexicalIndex:
                 if len(batch) >= batch_size:
                     summary += self._bulk_insert(batch) if use_bulk else self.upsert(batch)
                     batch = []
-                    if progress_every and summary.total and summary.total % progress_every < batch_size:
+                    if progress is not None:
+                        progress(summary.total, total_hint or summary.total)
+                    elif progress_every and summary.total and summary.total % progress_every < batch_size:
                         print(f"Processed: {summary.total}", flush=True)
             if batch:
                 summary += self._bulk_insert(batch) if use_bulk else self.upsert(batch)
+                if progress is not None:
+                    progress(summary.total, total_hint or summary.total)
         return summary
 
     def _bulk_insert(self, chunks: Sequence[UEChunk]) -> LexicalIngestSummary:

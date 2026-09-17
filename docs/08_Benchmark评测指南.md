@@ -41,7 +41,7 @@ flowchart LR
 - API Key 只保存在当前 PowerShell 环境变量，不写入代码或配置文件。
 
 ```powershell
-Set-Location 'E:\UE5.8 RAG'
+# 在克隆后的仓库根目录执行
 
 $env:DEEPSEEK_API_KEY = "你的 DeepSeek API Key"
 

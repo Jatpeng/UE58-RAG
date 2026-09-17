@@ -84,9 +84,15 @@ def load_engine_scanner_config(
         scanner_config = yaml.safe_load(config_file)
 
     project_root = ue_path.parent.parent
-    configured_root = str(ue_config["engine"]["root"]).strip()
+    # Environment configuration makes a cloned repository portable while the
+    # YAML value remains a convenient fallback for a private/local checkout.
+    configured_root = os.environ.get("UE_ROOT", "").strip()
     if not configured_root:
-        raise ValueError(f"engine.root is empty in {ue_path}")
+        configured_root = str(ue_config["engine"]["root"]).strip()
+    if not configured_root:
+        raise ValueError(
+            f"Unreal Engine root is not configured; set UE_ROOT or engine.root in {ue_path}"
+        )
     engine_root = Path(configured_root).expanduser()
     if not engine_root.is_absolute():
         engine_root = project_root / engine_root

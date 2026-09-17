@@ -19,6 +19,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ue_rag.schema import RetrievalResult, SourceType, UEChunk
 
 
+# Qdrant's default REST request limit is 32 MiB.  Leave headroom for JSON
+# structure and HTTP/client overhead because project chunks can be large.
+_MAX_UPSERT_PAYLOAD_BYTES = 24 * 1024 * 1024
+
+
 class QdrantConfig(BaseModel):
     """Connection and collection settings for the vector store."""
 
@@ -189,22 +194,28 @@ class QdrantVectorStore:
             kind = "updated" if previous is not None else "added"
             records.append((chunk, vector, payload, point_id, kind))
         if records:
-            try:
-                self._write_records(records, wait=True)
-            except Exception as error:
-                print(
-                    f"Qdrant upsert failed for {len(records)} points: {error}",
-                    file=sys.stderr,
-                    flush=True,
+            # ``upsert`` is also used by project synchronization, where all
+            # changed chunks arrive in one call.  Respect the configured point
+            # batch size there too, and additionally split on serialized size
+            # so large source files cannot exceed Qdrant's request limit.
+            for batch in _upsert_batches(records, self.config.batch_size):
+                try:
+                    self._write_records(batch, wait=True)
+                except Exception as error:
+                    print(
+                        f"Qdrant upsert failed for {len(batch)} points: {error}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    summary += IngestSummary(0, 0, 0, 0, len(batch))
+                    continue
+                summary += IngestSummary(
+                    0,
+                    sum(kind == "added" for *_, kind in batch),
+                    sum(kind == "updated" for *_, kind in batch),
+                    0,
+                    0,
                 )
-                return summary + IngestSummary(0, 0, 0, 0, len(records))
-            summary += IngestSummary(
-                0,
-                sum(kind == "added" for *_, kind in records),
-                sum(kind == "updated" for *_, kind in records),
-                0,
-                0,
-            )
         return summary
 
     def ingest(
@@ -337,6 +348,7 @@ def ingest_jsonl(
     batch_size: int | None = None,
     fast: bool = False,
     progress_every: int = 0,
+    progress: Any | None = None,
 ) -> IngestSummary:
     """Stream UEChunk JSONL and a NumPy embedding matrix into the store."""
 
@@ -368,12 +380,16 @@ def ingest_jsonl(
                 rows.append(row)
                 if len(chunks) == size:
                     summary += store.upsert(chunks, vectors[rows], fast=fast)
-                    if progress_every and summary.total % progress_every < size:
+                    if progress is not None:
+                        progress(summary.total, int(vectors.shape[0]))
+                    elif progress_every and summary.total % progress_every < size:
                         print(f"Indexed: {summary.total}/{vectors.shape[0]}", flush=True)
                     chunks, rows = [], []
             if chunks:
                 summary += store.upsert(chunks, vectors[rows], fast=fast)
-                if progress_every:
+                if progress is not None:
+                    progress(summary.total, int(vectors.shape[0]))
+                elif progress_every:
                     print(f"Indexed: {summary.total}/{vectors.shape[0]}", flush=True)
     finally:
         if ids_stream:
@@ -414,6 +430,38 @@ def _payload(chunk: UEChunk) -> dict[str, Any]:
         "content_sha256": hashlib.sha256(chunk.content.encode("utf-8")).hexdigest(),
     }
     return payload
+
+
+def _upsert_batches(
+    records: Sequence[tuple[UEChunk, np.ndarray, dict[str, Any], str, str]],
+    batch_size: int,
+) -> Iterator[list[tuple[UEChunk, np.ndarray, dict[str, Any], str, str]]]:
+    """Yield batches bounded by both point count and serialized payload size."""
+
+    batch: list[tuple[UEChunk, np.ndarray, dict[str, Any], str, str]] = []
+    batch_bytes = 0
+    for record in records:
+        chunk, vector, payload, point_id, kind = record
+        # This is intentionally conservative.  The vector and point-id JSON
+        # overhead is small compared with source content, and the 24 MiB cap
+        # leaves room below Qdrant's default 32 MiB limit.
+        record_bytes = len(json.dumps(
+            {
+                "id": point_id,
+                "vector": vector.tolist(),
+                "payload": payload,
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8"))
+        if batch and (len(batch) >= batch_size or batch_bytes + record_bytes > _MAX_UPSERT_PAYLOAD_BYTES):
+            yield batch
+            batch = []
+            batch_bytes = 0
+        batch.append((chunk, vector, payload, point_id, kind))
+        batch_bytes += record_bytes
+    if batch:
+        yield batch
 
 
 def _result(payload: dict[str, Any], score: float) -> RetrievalResult:

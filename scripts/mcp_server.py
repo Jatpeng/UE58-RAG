@@ -18,15 +18,20 @@ from ue_rag.retrieval import (
 from ue_rag.reranker import QwenReranker, load_rerank_config
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Serve UE RAG search tools over MCP.")
     parser.add_argument("--transport", choices=("stdio", "sse", "streamable-http"), default="stdio")
-    parser.add_argument("--ue-config", type=Path, default=Path("config/ue58.yaml"))
-    parser.add_argument("--lexical-config", type=Path, default=Path("config/lexical.yaml"))
-    parser.add_argument("--retrieval-config", type=Path, default=Path("config/retrieval.yaml"))
-    parser.add_argument("--qdrant-config", type=Path, default=Path("config/qdrant.yaml"))
-    parser.add_argument("--embedding-config", type=Path, default=Path("config/embedding.yaml"))
-    parser.add_argument("--reranker-config", type=Path, default=Path("config/reranker.yaml"))
+    parser.add_argument("--host", default="127.0.0.1", help="HTTP bind address.")
+    parser.add_argument("--port", type=int, default=8000, help="HTTP bind port.")
+    parser.add_argument("--ue-config", type=Path, default=PROJECT_ROOT / "config/ue58.yaml")
+    parser.add_argument("--lexical-config", type=Path, default=PROJECT_ROOT / "config/lexical.yaml")
+    parser.add_argument("--retrieval-config", type=Path, default=PROJECT_ROOT / "config/retrieval.yaml")
+    parser.add_argument("--qdrant-config", type=Path, default=PROJECT_ROOT / "config/qdrant.yaml")
+    parser.add_argument("--embedding-config", type=Path, default=PROJECT_ROOT / "config/embedding.yaml")
+    parser.add_argument("--reranker-config", type=Path, default=PROJECT_ROOT / "config/reranker.yaml")
     parser.add_argument("--enable-dense", action="store_true", help="Enable hybrid mode through Qdrant.")
     parser.add_argument("--enable-rerank", action="store_true", help="Enable rerank mode; implies dense mode.")
     parser.add_argument("--max-limit", type=int, default=50)
@@ -56,7 +61,11 @@ def main() -> int:
             reranker=reranker,
             rerank_top_k=load_rerank_config(args.ue_config, args.reranker_config).top_k if args.enable_rerank else 8,
         )
-        server = create_mcp_server(MCPTools(service, max_limit=args.max_limit))
+        server = create_mcp_server(
+            MCPTools(service, max_limit=args.max_limit),
+            host=args.host,
+            port=args.port,
+        )
         server.run(transport=args.transport)
     except (OSError, KeyError, ValueError, RuntimeError) as error:
         print(f"Error: {error}")

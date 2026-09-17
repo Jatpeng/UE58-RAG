@@ -188,10 +188,15 @@ def test_scan_roots_must_exist_under_engine_root(tmp_path: Path) -> None:
         EngineSourceScanner(config).validate()
 
 
-def test_workspace_config_points_to_verified_ue58_install() -> None:
+def test_workspace_config_accepts_ue_root_environment_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_engine_fixture(tmp_path)
+    monkeypatch.setenv("UE_ROOT", str(root))
+
     config = load_engine_scanner_config()
 
     assert config.engine_version == "5.8"
-    assert config.engine_root.name == "UE_5.8"
+    assert config.engine_root == root
     assert config.source_root == config.engine_root / "Engine" / "Source"
     assert config.plugins_root == config.engine_root / "Engine" / "Plugins"

@@ -86,6 +86,7 @@ def test_config_loads_version_only_from_ue_config() -> None:
 
     assert config.engine_version == "5.8"
     assert set(config.topics) == {
+        "full_documentation",
         "gameplay",
         "programming",
         "cpp",
