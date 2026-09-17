@@ -1,7 +1,4 @@
 # Unreal Engine 5.8 Developer RAG
-![Uploading image.png…]()
-
-
 **简体中文** | [English](README_EN.md)
 
 面向 Unreal Engine 5.8 开发者的本地 RAG 检索系统。项目将 UE 官方文档、
