@@ -18,6 +18,10 @@
 下载后可双击 `从HuggingFace下载并重建索引.bat`，自动恢复 engine 向量并建立
 Qdrant 索引。使用前请确认数据授权和 Hugging Face 仓库访问权限。
 
+也可以直接使用 Hugging Face 在线网页测试：
+
+[打开 UE5.8 RAG Web Test Space](https://huggingface.co/spaces/Jatpeng/UnrealEngine5.8RAG)
+
 ## 主要能力
 
 - 使用 Tree-sitter 解析 UE C++ 类、结构体、枚举、函数、方法和字段。

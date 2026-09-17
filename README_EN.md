@@ -11,6 +11,8 @@ After downloading, double-click `从HuggingFace下载并重建索引.bat` to res
 engine vectors and build the Qdrant index. Check the applicable data permissions
 and Hugging Face repository access before use.
 
+An online web demo is available in the [UE5.8 RAG Web Test Space](https://huggingface.co/spaces/Jatpeng/UnrealEngine5.8RAG).
+
 ## Clone and run on Windows
 
 Generated UE source data and indexes are intentionally not stored in Git. After
