@@ -3,3 +3,4 @@ huggingface_hub>=0.30
 hf_xet>=1.1
 numpy>=1.26
 sentence-transformers>=3.0
+spaces>=0.32

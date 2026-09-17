@@ -5,7 +5,8 @@ colorFrom: blue
 colorTo: purple
 sdk: gradio
 app_file: app.py
-python_version: "3.11"
+python_version: "3.12"
+suggested_hardware: zero-a10g
 header: mini
 tags:
   - unreal-engine
@@ -19,7 +20,8 @@ tags:
 This Space provides a web interface for testing semantic retrieval over the
 pre-generated UE5.8 RAG embedding artifacts.
 
-The application downloads the required files from
+The application uses ZeroGPU for on-demand embedding inference and downloads
+the required files from
 [`Jatpeng/ue58-rag-embeddings`](https://huggingface.co/datasets/Jatpeng/ue58-rag-embeddings)
 on demand. It does not upload or expose a Qdrant database.
 

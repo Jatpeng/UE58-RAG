@@ -10,6 +10,7 @@ from typing import Any
 
 import gradio as gr
 import numpy as np
+import spaces
 from huggingface_hub import hf_hub_download
 
 
@@ -107,11 +108,13 @@ def get_model() -> Any:
             if _model is None:
                 from sentence_transformers import SentenceTransformer
 
-                _model = SentenceTransformer(MODEL_ID, device=os.getenv("RAG_DEVICE", "cpu"))
+                default_device = "cuda" if os.getenv("ACCELERATOR", "none") != "none" else "cpu"
+                _model = SentenceTransformer(MODEL_ID, device=os.getenv("RAG_DEVICE", default_device))
                 _model.max_seq_length = 2048
     return _model
 
 
+@spaces.GPU(duration=120)
 def embed_query(text: str) -> np.ndarray:
     model = get_model()
     method = getattr(model, "encode_query", None) or model.encode
