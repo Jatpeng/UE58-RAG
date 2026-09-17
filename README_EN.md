@@ -2,6 +2,13 @@
 
 [Simplified Chinese](README.md) | **English**
 
+## Dashboard Preview
+
+![UE5.8 RAG observability dashboard](docs/assets/rag-dashboard.png)
+
+The local dashboard shows corpus size, embedding coverage, Qdrant status,
+retrieval checks, and RAG pipeline progress.
+
 ## Pre-generated Embeddings
 
 To skip local embedding generation, download the pre-generated vectors and
