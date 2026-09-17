@@ -53,7 +53,7 @@ for %%F in (
 )
 
 echo [2/4] 整理上传包...
-"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $pkg='%PACKAGE_DIR%'; New-Item -ItemType Directory -Force -Path (Join-Path $pkg 'engine'),(Join-Path $pkg 'docs') | Out-Null; Copy-Item 'data\chunks\engine\chunks.jsonl' (Join-Path $pkg 'engine\chunks.jsonl') -Force; Copy-Item 'data\embeddings\engine\embeddings.npy*' (Join-Path $pkg 'engine') -Force; Copy-Item 'data\chunks\docs\chunks.jsonl' (Join-Path $pkg 'docs\chunks.jsonl') -Force; Copy-Item 'data\embeddings\docs\embeddings.npy*' (Join-Path $pkg 'docs') -Force"
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $pkg='%PACKAGE_DIR%'; New-Item -ItemType Directory -Force -Path (Join-Path $pkg 'engine'),(Join-Path $pkg 'docs') | Out-Null; Copy-Item 'docs\huggingface_dataset_card.md' (Join-Path $pkg 'README.md') -Force; Copy-Item 'data\chunks\engine\chunks.jsonl' (Join-Path $pkg 'engine\chunks.jsonl') -Force; Copy-Item 'data\embeddings\engine\embeddings.npy*' (Join-Path $pkg 'engine') -Force; Copy-Item 'data\chunks\docs\chunks.jsonl' (Join-Path $pkg 'docs\chunks.jsonl') -Force; Copy-Item 'data\embeddings\docs\embeddings.npy*' (Join-Path $pkg 'docs') -Force"
 if errorlevel 1 (
   echo 整理上传包失败。
   pause
