@@ -2,6 +2,15 @@
 
 [Simplified Chinese](README.md) | **English**
 
+## Pre-generated Embeddings
+
+To skip local embedding generation, download the pre-generated vectors and
+chunk records from the [UE5.8 RAG Embeddings Dataset](https://huggingface.co/datasets/Jatpeng/ue58-rag-embeddings).
+
+After downloading, double-click `从HuggingFace下载并重建索引.bat` to restore the
+engine vectors and build the Qdrant index. Check the applicable data permissions
+and Hugging Face repository access before use.
+
 ## Clone and run on Windows
 
 Generated UE source data and indexes are intentionally not stored in Git. After

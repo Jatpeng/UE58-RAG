@@ -9,6 +9,15 @@
 > 仓库只发布程序、配置模板、测试和文档，不发布 Unreal Engine 源码、生成后的
 > 数据集、索引、Embedding、模型缓存或项目私有代码。
 
+## 预生成向量数据
+
+如需跳过本地 Embedding 生成，可以从 Hugging Face 下载预生成的向量和 chunks：
+
+[下载 UE5.8 RAG Embeddings Dataset](https://huggingface.co/datasets/Jatpeng/ue58-rag-embeddings)
+
+下载后可双击 `从HuggingFace下载并重建索引.bat`，自动恢复 engine 向量并建立
+Qdrant 索引。使用前请确认数据授权和 Hugging Face 仓库访问权限。
+
 ## 主要能力
 
 - 使用 Tree-sitter 解析 UE C++ 类、结构体、枚举、函数、方法和字段。
